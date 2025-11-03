@@ -5,48 +5,32 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, Plus, X } from "lucide-react"
 import { useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useFinancial } from "@/hooks/use-financial"
+import { useCurrentCashRegister, useOpenCashRegister, useCloseCashRegister } from "@/hooks/use-financial"
 
 export default function CashRegisterPage() {
-  const queryClient = useQueryClient()
-  const { getCurrentCashRegister, openCashRegister, closeCashRegister } = useFinancial()
+  const { data: cashRegister, isLoading } = useCurrentCashRegister()
+  const openRegisterMutation = useOpenCashRegister()
+  const closeRegisterMutation = useCloseCashRegister()
+
   const [openingBalance, setOpeningBalance] = useState("")
   const [closingBalance, setClosingBalance] = useState("")
-
-  const { data: cashRegister, isLoading } = useQuery({
-    queryKey: ["cash-register", "current"],
-    queryFn: getCurrentCashRegister,
-  })
-
-  const openRegisterMutation = useMutation({
-    mutationFn: openCashRegister,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-register"] })
-      setOpeningBalance("")
-    },
-  })
-
-  const closeRegisterMutation = useMutation({
-    mutationFn: closeCashRegister,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-register"] })
-      setClosingBalance("")
-    },
-  })
 
   const handleOpenRegister = async () => {
     await openRegisterMutation.mutateAsync({
       openingBalance: Number.parseFloat(openingBalance),
     })
+    setOpeningBalance("")
   }
 
   const handleCloseRegister = async () => {
     if (cashRegister?.id) {
       await closeRegisterMutation.mutateAsync({
-        cashRegisterId: cashRegister.id,
-        closingBalance: Number.parseFloat(closingBalance),
+        id: cashRegister.id,
+        data: {
+          closingBalance: Number.parseFloat(closingBalance),
+        },
       })
+      setClosingBalance("")
     }
   }
 
