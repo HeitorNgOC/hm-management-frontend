@@ -1,91 +1,80 @@
 "use client"
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useAuth } from "@/contexts/auth-context"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { DollarSign, Calendar, Users, Package } from "lucide-react"
+import { StatsCard } from "@/components/dashboard/stats-card"
+import { RevenueChart } from "@/components/dashboard/revenue-chart"
+import { AppointmentsStatusChart } from "@/components/dashboard/appointments-status-chart"
+import { TopServicesChart } from "@/components/dashboard/top-services-chart"
+import { EmployeePerformanceChart } from "@/components/dashboard/employee-performance-chart"
+import { ClientGrowthChart } from "@/components/dashboard/client-growth-chart"
+import { useDashboardStats } from "@/hooks/use-dashboard"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth()
+  const { data: stats, isLoading } = useDashboardStats()
 
   return (
     <ProtectedRoute>
-      <div className="container mx-auto p-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground">Bem-vindo ao HM Management</p>
-          </div>
-          <Button onClick={logout} variant="outline">
-            Sair
-          </Button>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral do seu negócio</p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Perfil do Usuário</CardTitle>
-              <CardDescription>Suas informações</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div>
-                <p className="text-sm font-medium">Nome</p>
-                <p className="text-sm text-muted-foreground">{user?.name}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Cargo</p>
-                <p className="text-sm text-muted-foreground">{user?.role}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Status</p>
-                <p className="text-sm text-muted-foreground">{user?.status}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Permissões</CardTitle>
-              <CardDescription>Suas permissões no sistema</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {user?.permissions.slice(0, 6).map((permission) => (
-                  <span key={permission} className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium">
-                    {permission}
-                  </span>
-                ))}
-                {user && user.permissions.length > 6 && (
-                  <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
-                    +{user.permissions.length - 6} mais
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Acesso Rápido</CardTitle>
-              <CardDescription>Funcionalidades principais</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start bg-transparent">
-                Gerenciar Usuários
-              </Button>
-              <Button variant="outline" className="w-full justify-start bg-transparent">
-                Ver Relatórios
-              </Button>
-              <Button variant="outline" className="w-full justify-start bg-transparent">
-                Configurações
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {isLoading ? (
+            <>
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-32" />
+              ))}
+            </>
+          ) : (
+            <>
+              <StatsCard
+                title="Receita Total"
+                value={stats?.totalRevenue || 0}
+                change={stats?.revenueChange}
+                icon={DollarSign}
+                format="currency"
+                iconColor="text-green-500"
+              />
+              <StatsCard
+                title="Agendamentos"
+                value={stats?.totalAppointments || 0}
+                change={stats?.appointmentsChange}
+                icon={Calendar}
+                iconColor="text-blue-500"
+              />
+              <StatsCard
+                title="Clientes Ativos"
+                value={stats?.activeClients || 0}
+                change={stats?.clientsChange}
+                icon={Users}
+                iconColor="text-purple-500"
+              />
+              <StatsCard
+                title="Itens em Falta"
+                value={stats?.lowStockItems || 0}
+                change={stats?.stockChange}
+                icon={Package}
+                iconColor="text-orange-500"
+              />
+            </>
+          )}
         </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <RevenueChart />
+          <AppointmentsStatusChart />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <TopServicesChart />
+          <EmployeePerformanceChart />
+        </div>
+
+        <ClientGrowthChart />
       </div>
     </ProtectedRoute>
   )

@@ -73,6 +73,11 @@ const navItems: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
+    title: "Dashboard Personalizado",
+    href: "/custom-dashboard",
+    icon: Settings,
+  },
+  {
     title: "Usuários",
     href: "/users",
     icon: Users,
