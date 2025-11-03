@@ -269,7 +269,7 @@ export function AppSidebar() {
 
     if (hasChildren) {
       return (
-        <PermissionGate key={item.href} permissions={item.permissions as any} roles={item.roles as any}>
+        <PermissionGate key={item.title} permissions={item.permissions as any} roles={item.roles as any}>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip={item.title} className="w-full justify-start">
               <item.icon className="h-4 w-4" />
@@ -277,7 +277,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
             <SidebarMenuSub>
               {item.children.map((child) => (
-                <PermissionGate key={child.href} permissions={child.permissions as any} roles={child.roles as any}>
+                <PermissionGate key={child.title} permissions={child.permissions as any} roles={child.roles as any}>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={isActive(child.href)}>
                       <Link href={child.href}>
@@ -295,7 +295,7 @@ export function AppSidebar() {
     }
 
     return (
-      <PermissionGate key={item.href} permissions={item.permissions as any} roles={item.roles as any}>
+      <PermissionGate key={item.title} permissions={item.permissions as any} roles={item.roles as any}>
         <SidebarMenuItem>
           <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.href)}>
             <Link href={item.href}>
