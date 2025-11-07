@@ -2,17 +2,17 @@ import { Badge } from "@/components/ui/badge"
 import type { UserStatus } from "@/lib/types/user"
 
 interface UserStatusBadgeProps {
-  status: UserStatus
+  status?: UserStatus | string | null
 }
 
 export function UserStatusBadge({ status }: UserStatusBadgeProps) {
-  const variants = {
-    active: { label: "Ativo", variant: "default" as const },
-    inactive: { label: "Inativo", variant: "secondary" as const },
-    on_leave: { label: "De Férias", variant: "outline" as const },
+  const variants: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+    active: { label: "Ativo", variant: "default" },
+    inactive: { label: "Inativo", variant: "secondary" },
+    on_leave: { label: "De Férias", variant: "outline" },
   }
 
-  const { label, variant } = variants[status]
+  const mapped = variants[(status ?? "").toString()] ?? { label: "Desconhecido", variant: "outline" }
 
-  return <Badge variant={variant}>{label}</Badge>
+  return <Badge variant={mapped.variant}>{mapped.label}</Badge>
 }

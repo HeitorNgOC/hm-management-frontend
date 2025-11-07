@@ -71,8 +71,10 @@ export interface RegisterRequest {
 // Auth response from API
 export interface AuthResponse {
   user: User
-  token: string
-  refreshToken?: string
+  token: {
+    token: string
+    refreshToken?: string
+  }
 }
 
 // Token payload (decoded JWT)

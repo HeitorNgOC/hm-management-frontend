@@ -1,12 +1,824 @@
 # API Documentation - HM Management System
 
 ## Índice
-1. [Módulo Academia (Gym)](#módulo-academia-gym)
-2. [Módulo Ficha de Treino (Workout)](#módulo-ficha-de-treino-workout)
-3. [Módulo Guichê de Atendimento (Queue)](#módulo-guichê-de-atendimento-queue)
-4. [Módulo Prontuário Médico (Medical Records)](#módulo-prontuário-médico-medical-records)
-5. [Módulo Trocas de Produtos (Exchange)](#módulo-trocas-de-produtos-exchange)
-6. [Módulo Dashboard](#módulo-dashboard)
+1. [Módulo IAM (Identity & Access Management)](#módulo-iam-identity--access-management)
+2. [Autenticação](#autenticação)
+3. [Empresa](#empresa)
+4. [Usuários](#usuários)
+5. [Posições/Cargos](#posiçõescargos)
+6. [Clientes](#clientes)
+7. [Serviços](#serviços)
+8. [Pacotes](#pacotes)
+9. [Agendamentos](#agendamentos)
+10. [Intervalos de Trabalho (Funcionários)](#intervalos-de-trabalho-funcionários)
+11. [Caixa (Cash Register)](#caixa-cash-register)
+12. [Transações Financeiras](#transações-financeiras)
+13. [Resumo Financeiro](#resumo-financeiro)
+14. [Fornecedores](#fornecedores)
+15. [Inventário/Estoque](#inventárioestoque)
+16. [Módulo Academia (Gym)](#módulo-academia-gym)
+17. [Módulo Ficha de Treino (Workout)](#módulo-ficha-de-treino-workout)
+18. [Módulo Guichê de Atendimento (Queue)](#módulo-guichê-de-atendimento-queue)
+19. [Módulo Prontuário Médico (Medical Records)](#módulo-prontuário-médico-medical-records)
+20. [Módulo Trocas de Produtos (Exchange)](#módulo-trocas-de-produtos-exchange)
+21. [Restaurante](#restaurante)
+22. [Marketing](#marketing)
+23. [Metas](#metas)
+24. [Configurações](#configurações)
+25. [Assinaturas e Pagamentos](#assinaturas-e-pagamentos)
+26. [Módulo Dashboard](#módulo-dashboard)
+
+---
+
+## Módulo IAM (Identity & Access Management)
+
+Este módulo consolida Autenticação, Empresa (tenant), Usuários e Posições/Cargos, definindo o modelo de identidade e controle de acesso multi-tenant.
+
+Observações importantes:
+- Todas as rotas (exceto fluxos públicos de convite/reset/verificação) exigem JWT no header Authorization.
+- O tenant é derivado exclusivamente do JWT (claim `companyId`). Não envie `companyId` em headers, query params ou body.
+- O primeiro usuário administrador é mockado no ambiente atual; não há fluxo de criação inicial de tenant no escopo deste documento.
+- Evite cadastro direto de usuários sem contexto de empresa; utilize convites.
+
+### Entidades
+
+#### Company (Tenant)
+Campos sugeridos:
+```typescript
+interface Company {
+  id: string
+  name: string                 // Razão/Nome fantasia
+  cnpj?: string                // Opcional no trial; obrigatório para emissão fiscal
+  email: string
+  phone?: string
+  address?: {
+    street: string
+    number: string
+    complement?: string
+    neighborhood: string
+    city: string
+    state: string
+    zipCode: string
+  }
+  settings?: {
+    language?: string
+    timeZone?: string
+    currency?: string
+  }
+  subscriptionStatus: 'active' | 'inactive' | 'trial' | 'expired'
+  createdAt: string
+  updatedAt: string
+}
+```
+Restrições/Índices:
+- UNIQUE (cnpj) quando informado.
+- Dados sempre isolados por `companyId`.
+
+#### User
+```typescript
+type UserRole = 'admin' | 'manager' | 'employee'
+type UserStatus = 'active' | 'inactive' | 'on_leave'
+
+interface User {
+  id: string
+  companyId: string
+  name: string
+  email: string               // único no sistema OU único por empresa + slug de login (ver notas)
+  phone?: string
+  cpf?: string
+  positionId?: string         // vínculo a Position
+  role: UserRole              // macro-perfil
+  permissions: Permission[]   // efetivas (derivadas de Position + ajustes)
+  status: UserStatus
+  avatar?: string
+  hireDate?: string
+  salary?: number
+  commission?: number
+  createdAt: string
+  updatedAt: string
+}
+```
+Restrições/Notas:
+- Recomendado email UNIQUE global para simplificar login. Alternativa: permitir mesmo email em tenants diferentes exigindo `companySlug` no login.
+- Deve haver pelo menos 1 usuário `admin` ativo por empresa (bloquear remoção/alteração que viole isso).
+
+#### Position (Cargo)
+```typescript
+interface Position {
+  id: string
+  companyId: string
+  name: string
+  description?: string
+  permissions: Permission[]   // lista de chaves canônicas
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+```
+Regra:
+- Não permitir excluir cargo vinculado a usuários (ou exigir reatribuição).
+
+#### Permission (Catálogo)
+Chaves canônicas sugeridas (extensível):
+- users.view/create/edit/delete
+- positions.view/create/edit/delete
+- appointments.view/create/edit/delete
+- inventory.view/create/edit/delete
+- financial.view/manage
+- reports.view, settings.view/edit, payments.view/manage
+
+#### Token (JWT)
+Payload recomendado:
+```json
+{
+  "userId": "uuid",
+  "companyId": "uuid",
+  "role": "admin|manager|employee",
+  "permissions": ["users.view", "settings.edit"],
+  "iat": 1730610000,
+  "exp": 1730617200
+}
+```
+
+### Fluxos de Autenticação e Provisionamento
+
+1) Admin inicial (mock)
+- No ambiente atual o primeiro admin/tenant é provisionado fora do fluxo de API (mock). Não há endpoint público de "tenant/register". Siga diretamente para o fluxo de convites.
+
+2) Convite de Usuário (com token do admin)
+- `POST /api/iam/invitations` cria convite e envia e-mail com `inviteToken`.
+- `POST /api/iam/invitations/list` lista convites (filtros/paginação) via corpo da requisição.
+- `POST /api/iam/invitations/get` retorna um convite por `id`.
+- `POST /api/iam/invitations/resend` reenvia o convite por `id`.
+- `POST /api/iam/invitations/delete` revoga o convite por `id`.
+- `POST /api/auth/accept-invite` consome `inviteToken` e define senha (público).
+
+Requests:
+```typescript
+// criar convite (admin autenticado)
+{ email: string; name?: string; role?: UserRole; positionId?: string }
+
+// aceitar convite (público)
+{ inviteToken: string; name?: string; password: string }
+```
+
+Padrão de corpo para convites (admin autenticado)
+```typescript
+// Criar convite
+POST /api/iam/invitations
+{
+  email: string,
+  name?: string,
+  role?: UserRole,
+  positionId?: string
+}
+
+// Listar convites (paginação e filtros)
+POST /api/iam/invitations/list
+{
+  page?: number,
+  limit?: number,
+  search?: string,
+  status?: 'pending' | 'accepted' | 'expired' | 'revoked'
+}
+
+// Buscar convite por id
+POST /api/iam/invitations/get
+{ id: string }
+
+// Reenviar convite por id
+POST /api/iam/invitations/resend
+{ id: string }
+
+// Revogar/Excluir convite por id
+POST /api/iam/invitations/delete
+{ id: string }
+```
+
+Respostas:
+```typescript
+// criação
+Invitation
+
+// listagem paginada
+{ data: Invitation[]; pagination: PaginationMeta }
+
+// aceitar convite (login público pós-onboarding)
+{ user: User; token: { token: string; refreshToken?: string } }
+```
+
+3) Login / Refresh / Logout
+- `POST /api/auth/login` { email, password } -> { user, token, refreshToken }
+- `POST /api/auth/refresh` { refreshToken } -> { token }
+- `POST /api/auth/logout`
+
+4) Recuperação de Senha e Verificação de E-mail
+- `POST /api/auth/forgot-password` { email }
+- `POST /api/auth/reset-password` { token, newPassword }
+- `POST /api/auth/verify-email` { token }
+
+### Endpoints — Company (Tenant)
+
+- `GET /api/company/profile` -> Company
+- `PUT /api/company/info` (CompanyInfoData) -> Company
+- `PUT /api/company/operating-hours` { operatingHours: OperatingHours[] } -> Company
+- `GET /api/company/service-categories` -> ServiceCategory[]
+- `POST /api/company/service-categories` -> ServiceCategory
+- `PUT /api/company/service-categories/:id` -> ServiceCategory
+- `DELETE /api/company/service-categories/:id`
+- `GET /api/company/payment-methods` -> PaymentMethod[]
+- `PUT /api/company/payment-methods` { paymentMethods: PaymentMethod[] } -> PaymentMethod[]
+
+Notas:
+- Todas filtrando por `companyId` do token.
+
+### Endpoints — Users (token-only tenant)
+
+- `POST /api/users/list` { page, limit, search, role, status, positionId } -> { data: User[], pagination }
+- `POST /api/users/get` { id } -> User
+- `POST /api/users` (CreateUserRequest) -> User
+- `PATCH /api/users/:id` (UpdateUserRequest) -> User
+- `POST /api/users/status` { id, status } -> User
+- `POST /api/users/delete` { id }
+
+Regras:
+- Bloquear ações que deixem a empresa sem admin ativo.
+- Email único (ver decisão acima).
+
+### Endpoints — Positions (token-only tenant)
+
+- `POST /api/positions/list` { page, limit } -> { data: Position[], pagination }
+- `POST /api/positions/get` { id } -> Position
+- `POST /api/positions` (CreatePositionRequest) -> Position
+- `PATCH /api/positions/:id` (UpdatePositionRequest) -> Position
+- `POST /api/positions/delete` { id }
+- `GET /api/iam/permissions` -> Permission[] (catálogo de permissões e descrições)
+
+Regras:
+- Impedir exclusão se houver usuários vinculados (ou exigir reatribuição).
+
+### Erros e Códigos
+- 400 validação, 401 auth, 403 permissão, 404 não encontrado, 409 conflito (email duplicado, excluir cargo em uso), 422 regras de negócio (sem admin restante).
+
+### Esquemas de Banco (sugestão)
+
+companies
+```sql
+id uuid PK, name text not null, cnpj text unique, email text not null,
+phone text, address jsonb, settings jsonb, subscription_status text,
+created_at timestamp, updated_at timestamp
+```
+
+positions
+```sql
+id uuid PK, company_id uuid not null references companies(id) on delete cascade,
+name text not null, description text, permissions jsonb not null,
+is_default boolean default false, created_at timestamp, updated_at timestamp,
+unique(company_id, name)
+```
+
+users
+```sql
+id uuid PK, company_id uuid not null references companies(id) on delete cascade,
+name text not null, email text not null unique, phone text, cpf text,
+position_id uuid references positions(id), role text, permissions jsonb,
+status text default 'active', password_hash text not null,
+created_at timestamp, updated_at timestamp
+```
+
+invitations (opcional, recomendado)
+```sql
+id uuid PK, company_id uuid not null references companies(id) on delete cascade,
+email text not null, role text, position_id uuid references positions(id),
+token text not null unique, expires_at timestamp, accepted_at timestamp,
+created_at timestamp
+```
+
+Notas:
+- Permissões efetivas do usuário podem ser calculadas como união(Position.permissions, ajustes do usuário). Persistir cópia em `users.permissions` acelera leitura, mas deve ser sincronizada ao editar cargo.
+
+---
+
+## Autenticação
+
+### POST /api/auth/login
+Autentica o usuário e retorna tokens.
+
+Request Body:
+```typescript
+{
+  email: string
+  password: string
+}
+```
+
+Response:
+```typescript
+{
+  user: User
+  token: string             // JWT de acesso
+  refreshToken?: string
+}
+```
+
+### POST /api/auth/register
+Cria um usuário e empresa inicial (onboarding).
+
+Nota: No ambiente multi-tenant atual, o cadastro direto está desabilitado. O fluxo oficial para inclusão de usuários é via convites (`/api/iam/invitations` + `/api/auth/accept-invite`). Este endpoint permanece apenas como referência/legado.
+
+Request Body:
+```typescript
+{
+  name: string
+  email: string
+  password: string
+  phone?: string
+  companyName: string
+}
+```
+
+Response: AuthResponse
+
+### GET /api/auth/me
+Retorna o usuário autenticado atual.
+
+Response: User
+
+### POST /api/auth/logout
+Invalida a sessão atual.
+
+### POST /api/auth/refresh
+Renova o token de acesso.
+
+Request Body:
+```typescript
+{ refreshToken: string }
+```
+
+Response:
+```typescript
+{ token: string }
+```
+
+### POST /api/auth/forgot-password
+Dispara e-mail de recuperação de senha.
+
+Request Body: `{ email: string }`
+
+### POST /api/auth/reset-password
+Redefine a senha com token recebido por e-mail.
+
+Request Body:
+```typescript
+{ token: string; newPassword: string }
+```
+
+### POST /api/auth/verify-email
+Confirma e-mail do usuário com token.
+
+Request Body: `{ token: string }`
+
+---
+
+## Empresa
+
+### GET /api/company/profile
+Retorna os dados completos da empresa.
+
+Response: Company
+
+### PUT /api/company/info
+Atualiza informações básicas da empresa.
+
+Request Body: CompanyInfoData
+
+Response: Company
+
+### PUT /api/company/operating-hours
+Atualiza horários de funcionamento.
+
+Request Body:
+```typescript
+{ operatingHours: OperatingHours[] }
+```
+
+Response: Company
+
+### GET /api/company/service-categories
+Lista categorias de serviços da empresa.
+
+Response: ServiceCategory[]
+
+### POST /api/company/service-categories
+Cria uma categoria de serviço.
+
+Request Body: Omit<ServiceCategory, "id">
+
+Response: ServiceCategory
+
+### PUT /api/company/service-categories/:id
+Atualiza uma categoria de serviço.
+
+### DELETE /api/company/service-categories/:id
+Remove uma categoria de serviço.
+
+### GET /api/company/payment-methods
+Lista métodos de pagamento aceitos.
+
+Response: PaymentMethod[]
+
+### PUT /api/company/payment-methods
+Atualiza métodos de pagamento.
+
+Request Body:
+```typescript
+{ paymentMethods: PaymentMethod[] }
+```
+
+### POST /api/company/complete-onboarding
+Marca o onboarding como concluído.
+
+---
+
+## Usuários
+
+### GET /api/users
+Lista usuários com filtros e paginação.
+
+Query Parameters:
+```typescript
+{
+  search?: string
+  role?: "admin" | "manager" | "employee"
+  status?: "active" | "inactive" | "on_leave"
+  positionId?: string
+  page?: number
+  limit?: number
+}
+```
+
+Response:
+```typescript
+{
+  data: User[]
+  pagination: PaginationMeta
+}
+```
+
+### GET /api/users/:id
+Retorna um usuário específico.
+
+### POST /api/users
+Cria um novo usuário.
+
+Request Body: CreateUserRequest
+
+### PATCH /api/users/:id
+Atualiza dados do usuário.
+
+Request Body: UpdateUserRequest
+
+### PATCH /api/users/:id/status
+Atualiza o status do usuário.
+
+Request Body:
+```typescript
+{ status: "active" | "inactive" | "on_leave" }
+```
+
+### DELETE /api/users/:id
+Remove um usuário.
+
+---
+
+## Posições/Cargos
+
+### GET /api/positions
+Lista posições/cargos da empresa.
+
+Response: { data: Position[]; pagination: PaginationMeta }
+
+### GET /api/positions/:id
+Retorna uma posição.
+
+### POST /api/positions
+Cria uma nova posição com permissões.
+
+Request Body: CreatePositionRequest
+
+### PATCH /api/positions/:id
+Atualiza uma posição.
+
+Request Body: UpdatePositionRequest
+
+### DELETE /api/positions/:id
+Remove uma posição.
+
+---
+
+## Clientes
+
+### GET /api/clients
+Lista clientes (filtros opcionais).
+
+Query Parameters: ClientFilters
+
+Response: Client[]
+
+### GET /api/clients/:id
+Retorna um cliente.
+
+### POST /api/clients
+Cria um cliente.
+
+Request Body: CreateClientRequest
+
+### PUT /api/clients/:id
+Atualiza um cliente.
+
+Request Body: UpdateClientRequest
+
+### DELETE /api/clients/:id
+Remove um cliente.
+
+### POST /api/clients/bulk-delete
+Remove vários clientes de uma vez.
+
+Request Body: `{ ids: string[] }`
+
+---
+
+## Serviços
+
+### GET /api/services
+Lista serviços (filtros por categoria/ativo).
+
+Query Parameters: ServiceFilters
+
+Response: Service[]
+
+### GET /api/services/:id
+Retorna um serviço.
+
+### POST /api/services
+Cria um serviço.
+
+Request Body: CreateServiceRequest
+
+### PUT /api/services/:id
+Atualiza um serviço.
+
+Request Body: UpdateServiceRequest
+
+### DELETE /api/services/:id
+Remove um serviço.
+
+### POST /api/services/bulk-delete
+Remove vários serviços.
+
+Request Body: `{ ids: string[] }`
+
+---
+
+## Pacotes
+
+### GET /api/packages
+Lista pacotes de serviços/produtos.
+
+Query Parameters: PackageFilters
+
+Response: Package[]
+
+### GET /api/packages/:id
+Retorna um pacote.
+
+### POST /api/packages
+Cria um pacote.
+
+Request Body: CreatePackageRequest
+
+### PUT /api/packages/:id
+Atualiza um pacote.
+
+Request Body: UpdatePackageRequest
+
+### DELETE /api/packages/:id
+Remove um pacote.
+
+### POST /api/packages/bulk-delete
+Remove vários pacotes.
+
+Request Body: `{ ids: string[] }`
+
+---
+
+## Agendamentos
+
+### GET /api/appointments
+Lista agendamentos com filtros e paginação.
+
+Query Parameters:
+```typescript
+{
+  date?: string
+  employeeId?: string
+  status?: AppointmentStatus
+  clientId?: string
+  page?: number
+  limit?: number
+}
+```
+
+Response: { data: Appointment[]; pagination: PaginationMeta }
+
+### GET /api/appointments/:id
+Retorna um agendamento.
+
+### POST /api/appointments
+Cria um novo agendamento.
+
+Request Body: CreateAppointmentRequest
+
+### PATCH /api/appointments/:id
+Atualiza um agendamento.
+
+Request Body: UpdateAppointmentRequest
+
+### PATCH /api/appointments/:id/status
+Atualiza o status do agendamento.
+
+Request Body: `{ status: AppointmentStatus }`
+
+### DELETE /api/appointments/:id
+Remove um agendamento.
+
+### GET /api/appointments/available-slots
+Retorna horários disponíveis para um funcionário/serviço em uma data.
+
+Query Parameters: `{ employeeId: string; date: string; serviceId: string }`
+
+---
+
+## Intervalos de Trabalho (Funcionários)
+
+### GET /api/employee-time-intervals
+Lista intervalos de trabalho por filtros.
+
+Query Parameters: EmployeeTimeIntervalFilters
+
+Response: EmployeeTimeInterval[]
+
+### GET /api/employee-time-intervals/employee/:employeeId
+Lista intervalos de um funcionário.
+
+### GET /api/employee-time-intervals/:id
+Retorna um intervalo específico.
+
+### POST /api/employee-time-intervals
+Cria um intervalo.
+
+Request Body: CreateEmployeeTimeIntervalRequest
+
+### PUT /api/employee-time-intervals/:id
+Atualiza um intervalo.
+
+Request Body: UpdateEmployeeTimeIntervalRequest
+
+### DELETE /api/employee-time-intervals/:id
+Remove um intervalo.
+
+### POST /api/employee-time-intervals/bulk-delete
+Remove vários intervalos.
+
+Request Body: `{ ids: string[] }`
+
+---
+
+## Caixa (Cash Register)
+
+### GET /api/cash-register/current
+Retorna o caixa atual aberto (se houver).
+
+Response: CashRegister
+
+### GET /api/cash-register
+Lista aberturas/fechamentos de caixa com paginação.
+
+Response: { data: CashRegister[]; pagination: PaginationMeta }
+
+### POST /api/cash-register/open
+Abre um novo caixa.
+
+Request Body: CreateCashRegisterRequest
+
+### POST /api/cash-register/:id/close
+Fecha o caixa.
+
+Request Body: CloseCashRegisterRequest
+
+---
+
+## Transações Financeiras
+
+### GET /api/transactions
+Lista transações financeiras.
+
+Query Parameters: TransactionFilters
+
+Response: { data: Transaction[]; pagination: PaginationMeta }
+
+### POST /api/transactions
+Cria uma transação (receita ou despesa).
+
+Request Body: CreateTransactionRequest
+
+### DELETE /api/transactions/:id
+Remove uma transação.
+
+---
+
+## Resumo Financeiro
+
+### GET /api/financial/summary
+Retorna um resumo do período.
+
+Query Parameters: `{ startDate: string; endDate: string }`
+
+Response: FinancialSummary
+
+---
+
+## Fornecedores
+
+### GET /api/suppliers
+Lista fornecedores com filtros.
+
+Response: Supplier[]
+
+### GET /api/suppliers/:id
+Retorna um fornecedor.
+
+### POST /api/suppliers
+Cria um fornecedor.
+
+Request Body: CreateSupplierRequest
+
+### PUT /api/suppliers/:id
+Atualiza um fornecedor.
+
+Request Body: UpdateSupplierRequest
+
+### DELETE /api/suppliers/:id
+Remove um fornecedor.
+
+### POST /api/suppliers/bulk-delete
+Remove vários fornecedores.
+
+Request Body: `{ ids: string[] }`
+
+---
+
+## Inventário/Estoque
+
+### GET /api/inventory
+Lista itens de estoque com filtros.
+
+Query Parameters: InventoryFilters
+
+Response: { data: InventoryItem[]; pagination: PaginationMeta }
+
+### GET /api/inventory/:id
+Retorna um item.
+
+### POST /api/inventory
+Cria um item.
+
+Request Body: CreateInventoryItemRequest
+
+### PATCH /api/inventory/:id
+Atualiza um item.
+
+Request Body: UpdateInventoryItemRequest
+
+### DELETE /api/inventory/:id
+Remove um item.
+
+### GET /api/inventory/movements
+Lista movimentações de estoque.
+
+Query Parameters: `{ itemId?: string; page?: number; limit?: number }`
+
+Response: { data: InventoryMovement[]; pagination: PaginationMeta }
+
+### POST /api/inventory/movements
+Registra uma movimentação de estoque (entrada/saída/ajuste/perda).
+
+Request Body: CreateMovementRequest
+
+### GET /api/inventory/low-stock
+Retorna itens com estoque baixo.
+
+Response: InventoryItem[]
 
 ---
 
@@ -1515,6 +2327,240 @@ DashboardLayout
 **Particularidades:**
 - Salva as preferências do usuário
 - Permite adicionar, remover e reordenar widgets
+
+---
+
+## Restaurante
+
+### Mesas (Tables)
+
+#### GET /api/tables
+Lista mesas.
+
+Response: Table[]
+
+#### GET /api/tables/:id
+Retorna uma mesa.
+
+#### POST /api/tables
+Cria uma mesa.
+
+Request Body: CreateTableRequest
+
+#### PATCH /api/tables/:id
+Atualiza uma mesa.
+
+Request Body: UpdateTableRequest
+
+#### DELETE /api/tables/:id
+Remove uma mesa.
+
+### Pedidos (Orders)
+
+#### GET /api/orders
+Lista pedidos com paginação e filtro por status.
+
+Query Parameters: `{ page?: number; limit?: number; status?: string }`
+
+Response: { data: Order[]; pagination: PaginationMeta }
+
+#### GET /api/orders/:id
+Retorna um pedido.
+
+#### POST /api/orders
+Cria um pedido para mesa ou balcão.
+
+Request Body: CreateOrderRequest
+
+#### PATCH /api/orders/:id
+Atualiza um pedido (status, pagamento, desconto, observações).
+
+Request Body: UpdateOrderRequest
+
+#### POST /api/orders/:orderId/items
+Adiciona item ao pedido.
+
+Request Body: AddOrderItemRequest
+
+#### DELETE /api/orders/:orderId/items/:itemId
+Remove item do pedido.
+
+#### POST /api/orders/:id/close
+Fecha o pedido (baixa financeira deve ser tratada pelo backend).
+
+---
+
+## Marketing
+
+### Campanhas
+
+#### GET /api/marketing/campaigns
+Lista campanhas com filtros.
+
+Query Parameters: MarketingFilters & `{ page?: number }`
+
+#### GET /api/marketing/campaigns/:id
+Retorna campanha.
+
+#### POST /api/marketing/campaigns
+Cria campanha.
+
+#### PUT /api/marketing/campaigns/:id
+Atualiza campanha.
+
+#### DELETE /api/marketing/campaigns/:id
+Remove campanha.
+
+#### POST /api/marketing/campaigns/:id/send
+Dispara envio da campanha.
+
+#### POST /api/marketing/campaigns/:id/pause
+Pausa a campanha.
+
+#### POST /api/marketing/campaigns/:id/cancel
+Cancela a campanha.
+
+### Templates
+
+#### GET /api/marketing/templates
+Lista templates.
+
+#### GET /api/marketing/templates/:id
+Retorna template.
+
+#### POST /api/marketing/templates
+Cria template.
+
+#### PUT /api/marketing/templates/:id
+Atualiza template.
+
+#### DELETE /api/marketing/templates/:id
+Remove template.
+
+### Cupons
+
+#### GET /api/marketing/coupons
+Lista cupons com filtros.
+
+#### GET /api/marketing/coupons/:id
+Retorna cupom.
+
+#### POST /api/marketing/coupons
+Cria cupom.
+
+#### PUT /api/marketing/coupons/:id
+Atualiza cupom.
+
+#### DELETE /api/marketing/coupons/:id
+Remove cupom.
+
+#### POST /api/marketing/coupons/:code/validate
+Valida um código de cupom.
+
+---
+
+## Metas
+
+#### GET /api/goals
+Lista metas.
+
+#### GET /api/goals/:id
+Retorna meta.
+
+#### POST /api/goals
+Cria meta.
+
+Request Body: CreateGoalRequest
+
+#### PUT /api/goals/:id
+Atualiza meta.
+
+Request Body: UpdateGoalRequest
+
+#### DELETE /api/goals/:id
+Remove meta.
+
+#### POST /api/goals/bulk-delete
+Remove várias metas.
+
+Request Body: `{ ids: string[] }`
+
+---
+
+## Configurações
+
+### Configurações da Empresa
+
+#### GET /api/settings/company
+Retorna configurações gerais da empresa.
+
+Response: CompanySettings
+
+#### PUT /api/settings/company
+Atualiza configurações da empresa.
+
+Request Body: UpdateCompanySettingsRequest
+
+### Comissões (Padrões e Específicas)
+
+#### GET /api/settings/commissions
+Lista configurações de comissão.
+
+Query Parameters: CommissionSettingFilters
+
+Response: CommissionSetting[]
+
+#### POST /api/settings/commissions
+Cria configuração de comissão (por serviço e/ou funcionário, ou padrão).
+
+Request Body: CreateCommissionSettingRequest
+
+#### PUT /api/settings/commissions/:id
+Atualiza configuração de comissão.
+
+#### DELETE /api/settings/commissions/:id
+Remove configuração de comissão.
+
+---
+
+## Assinaturas e Pagamentos
+
+### Planos e Assinatura
+
+#### GET /api/subscription/plans
+Lista planos disponíveis.
+
+Response: SubscriptionPlan[]
+
+#### GET /api/subscription/current
+Retorna a assinatura atual da empresa.
+
+Response: Subscription
+
+#### POST /api/subscription
+Cria uma assinatura.
+
+Request Body: CreateSubscriptionRequest
+
+#### PATCH /api/subscription/:id
+Atualiza uma assinatura (mudança de plano, auto-renovação, etc.).
+
+Request Body: UpdateSubscriptionRequest
+
+#### POST /api/subscription/:id/cancel
+Cancela a assinatura (no fim do ciclo atual, conforme política).
+
+### Pagamentos
+
+#### GET /api/payments
+Lista pagamentos (assinaturas ou avulsos).
+
+Response: { data: Payment[]; pagination: PaginationMeta }
+
+#### POST /api/payments
+Cria um pagamento.
+
+Request Body: CreatePaymentRequest
 
 ---
 

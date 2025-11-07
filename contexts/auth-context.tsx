@@ -3,7 +3,8 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import type { User, LoginRequest, RegisterRequest, Permission } from "@/lib/types/auth"
+import type { LoginRequest, RegisterRequest } from "@/lib/types/auth"
+import type { User, Permission } from "@/lib/types/user"
 import { authService } from "@/lib/services/auth.service"
 import { useToast } from "@/hooks/use-toast"
 import { storeTokens, clearTokens, getAuthToken } from "@/lib/utils/token"
@@ -40,23 +41,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const initAuth = async () => {
       try {
         const storedToken = getAuthToken()
-        const storedUser = localStorage.getItem("user")
+        const storedUser = typeof window !== "undefined" ? localStorage.getItem("user") : null
 
-        if (storedToken && storedUser) {
-          setToken(storedToken)
-          setUser(JSON.parse(storedUser))
+        if (!storedToken) {
+          return
+        }
 
-          // Verify token is still valid by fetching current user
+        // Always set token when present
+        setToken(storedToken)
+
+        // If we have a cached user, use it immediately for a smoother UX
+        if (storedUser) {
           try {
-            const currentUser = await authService.me()
-            setUser(currentUser)
-            localStorage.setItem("user", JSON.stringify(currentUser))
-          } catch (error) {
-            // Token is invalid, clear auth state
-            console.error("[v0] Token validation failed:", error)
+            setUser(JSON.parse(storedUser))
+          } catch {}
+        }
+
+        // Verify token by fetching the current user
+        try {
+          const currentUser = await authService.currentUser()
+          setUser(currentUser)
+          localStorage.setItem("user", JSON.stringify(currentUser))
+        } catch (error: any) {
+          // Only clear tokens on explicit auth failures
+          const status = error?.response?.status
+          if (status === 401 || status === 403) {
+            console.error("[v0] Token invalid on init:", error)
             clearTokens()
             setToken(null)
             setUser(null)
+          } else {
+            // Network/server errors: keep existing token and any cached user; allow app to retry later
+            console.warn("[v0] currentUser fetch failed (non-auth). Keeping session:", error?.message || error)
           }
         }
       } catch (error) {
@@ -71,72 +87,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (credentials: LoginRequest) => {
     try {
-      // const response = await authService.login(credentials)
-      const mockUser: User = {
-        id: "123456789",
-        email: "admin@example.com",
-        name: "Admin User",
-        phone: "+55 11 99999-9999",
-        avatar: "https://ui-avatars.com/api/?name=Admin+User",
-        role: "ADMIN",
-        status: "ACTIVE",
-        companyId: "company_001",
-        positionId: "position_admin",
-        permissions: [
-          "users.view",
-          "users.create",
-          "users.edit",
-          "users.delete",
-          "positions.view",
-          "positions.create",
-          "positions.edit",
-          "positions.delete",
-          "appointments.view",
-          "appointments.create",
-          "appointments.edit",
-          "appointments.delete",
-          "inventory.view",
-          "inventory.create",
-          "inventory.edit",
-          "inventory.delete",
-          "restaurant.view",
-          "restaurant.create",
-          "restaurant.edit",
-          "restaurant.delete",
-          "financial.view",
-          "financial.create",
-          "financial.edit",
-          "financial.delete",
-          "reports.view",
-          "reports.export",
-          "settings.view",
-          "settings.edit",
-          "payments.view",
-          "payments.manage"
-        ],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      const response = await authService.login(credentials)
 
+      // Store tokens and fetch full user profile (with permissions)
+      storeTokens(response.token.token, response.token.refreshToken)
+      setToken(response.token.token)
 
-      // Fake token (JWT-like structure)
-      const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEyMzQ1Njc4OSIsInJvbGUiOiJBRE1JTiIsIm5hbWUiOiJBZG1pbiBVc2VyIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsImNvbXBhbnlJZCI6ImNvbXBhbnlfMDAxIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MzE1MzYwMDB9.signature_mock_placeholder";
+      // Seed session with user from login (contains companyId/name)
+      try {
+        localStorage.setItem("user", JSON.stringify(response.user))
+      } catch {}
 
-      storeTokens(mockToken, mockToken)
-      localStorage.setItem("user", JSON.stringify(mockUser))
-
-      setToken(mockToken)
-      setUser(mockUser)
+  // Fetch the complete user object to ensure permissions/relations are present
+  const currentUser = await authService.currentUser()
+      setUser(currentUser)
+      localStorage.setItem("user", JSON.stringify(currentUser))
 
       toast({
         title: "Login realizado com sucesso",
-        description: `Bem-vindo, ${mockUser.name}!`,
+        description: `Bem-vindo, ${response.user.email}!`,
       })
 
       // Redirect based on role
-      if (mockUser.role === "ADMIN") {
+      if (response.user.role === "ADMIN") {
         router.push("/admin/dashboard")
-      } else if (mockUser.role === "MANAGER") {
+      } else if (response.user.role === "MANAGER") {
         router.push("/manager/dashboard")
       } else {
         router.push("/dashboard")
@@ -156,11 +131,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await authService.register(data)
 
-      storeTokens(response.token, response.refreshToken)
-      localStorage.setItem("user", JSON.stringify(response.user))
+      // Store tokens and fetch full user profile (with permissions)
+      storeTokens(response.token.token, response.token.refreshToken)
+      setToken(response.token.token)
 
-      setToken(response.token)
-      setUser(response.user)
+      // Seed session with user from register (contains companyId/name)
+      try {
+        localStorage.setItem("user", JSON.stringify(response.user))
+      } catch {}
+
+  const currentUser = await authService.currentUser()
+      setUser(currentUser)
+      localStorage.setItem("user", JSON.stringify(currentUser))
 
       toast({
         title: "Cadastro realizado com sucesso",

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useAuth } from "@/contexts/auth-context"
-import type { UserRole } from "@/lib/types/auth"
+import type { UserRole } from "@/lib/types/user"
 
 interface RoleGateProps {
   children: React.ReactNode

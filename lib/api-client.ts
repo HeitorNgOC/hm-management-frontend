@@ -2,7 +2,7 @@ import axios from "axios"
 import { getAuthToken, getRefreshToken, isTokenExpired, storeTokens, clearTokens } from "@/lib/utils/token"
 
 // Base API URL - will be configured via environment variable
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+const API_BASE_URL = "http://localhost:4000"
 
 // Create axios instance with default configuration
 export const apiClient = axios.create({
@@ -47,7 +47,7 @@ apiClient.interceptors.request.use(
       return config
     }
 
-    const token = getAuthToken()
+  const token = getAuthToken()
 
     if (token) {
       // Check if token is expired or about to expire
@@ -133,6 +133,7 @@ apiClient.interceptors.response.use(
 
           // Update the failed request with new token
           originalRequest.headers.Authorization = `Bearer ${newToken}`
+          // No tenant header required anymore
 
           // Notify all waiting requests
           onTokenRefreshed(newToken)

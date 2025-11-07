@@ -5,7 +5,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import type { Permission, UserRole } from "@/lib/types/auth"
+import type { Permission, UserRole } from "@/lib/types/user"
 
 interface ProtectedRouteProps {
   children: React.ReactNode

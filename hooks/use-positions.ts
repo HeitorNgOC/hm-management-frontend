@@ -13,10 +13,11 @@ export const positionKeys = {
   detail: (id: string) => [...positionKeys.details(), id] as const,
 }
 
-export function usePositions(page = 1, limit = 50) {
+export function usePositions(page = 1, limit = 50, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: positionKeys.list(page),
     queryFn: () => positionService.getPositions(page, limit),
+    enabled: options?.enabled ?? true,
   })
 }
 

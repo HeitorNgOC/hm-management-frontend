@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { formatPhoneBR, normalizeEmail } from "@/lib/utils/mask"
 
 interface UserFormDialogProps {
   open: boolean
@@ -101,7 +102,12 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" {...field} />
+                      <Input
+                        type="email"
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(normalizeEmail(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -115,7 +121,13 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
                   <FormItem>
                     <FormLabel>Telefone</FormLabel>
                     <FormControl>
-                      <Input placeholder="(00) 00000-0000" {...field} />
+                      <Input
+                        placeholder="(00) 00000-0000"
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(formatPhoneBR(e.target.value))}
+                        inputMode="tel"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

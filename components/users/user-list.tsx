@@ -13,22 +13,26 @@ import { UserFormDialog } from "./user-form-dialog"
 import { UserStatusBadge } from "./user-status-badge"
 import { EmptyState, SkeletonTable, BulkActionBar, ConfirmDeleteDialog } from "@/components/crud"
 import type { UserFilters, UserRole, UserStatus } from "@/lib/types/user"
+import { InviteUserDialog } from "@/components/users/invitations/invite-user-dialog"
+import { InvitationList } from "@/components/users/invitations/invitation-list"
 
 export function UserList() {
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<UserFilters>({})
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id?: string }>({ open: false })
 
-  const { data, isLoading } = useUsers(filters, page)
+  const { data, isLoading, isError, refetch } = useUsers(filters, page)
+  const rows = Array.isArray(data?.data) ? (data!.data as any[]) : []
+  const invalidData = !!data && !Array.isArray(data?.data)
+  const totalPages = data?.pagination?.totalPages ?? 0
+  const currentPage = data?.pagination?.page ?? page
   const deleteUser = useDeleteUser()
 
-  const allSelected = useMemo(
-    () => (data?.data.length ? selectedIds.size === data.data.length : false),
-    [selectedIds, data?.data.length],
-  )
+  const allSelected = useMemo(() => (rows.length ? selectedIds.size === rows.length : false), [selectedIds, rows.length])
 
   const handleSearch = (search: string) => {
     setFilters((prev) => ({ ...prev, search }))
@@ -67,7 +71,7 @@ export function UserList() {
     if (allSelected) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(data?.data.map((u) => u.id) || []))
+  setSelectedIds(new Set(rows.map((u) => u.id)))
     }
   }
 
@@ -85,10 +89,13 @@ export function UserList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Usuários</h2>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Usuário
-        </Button>
+        <div className="flex gap-2">
+          <InviteUserDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Usuário
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-4">
@@ -127,7 +134,7 @@ export function UserList() {
       {selectedIds.size > 0 && (
         <BulkActionBar
           selectedCount={selectedIds.size}
-          totalCount={data?.data.length || 0}
+          totalCount={rows.length}
           onSelectAll={handleSelectAll}
           onClearSelection={() => setSelectedIds(new Set())}
           actions={[
@@ -165,7 +172,29 @@ export function UserList() {
           <TableBody>
             {isLoading ? (
               <SkeletonTable rows={5} columns={7} />
-            ) : data?.data.length === 0 ? (
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState
+                    icon="AlertTriangle"
+                    title="Erro ao carregar usuários"
+                    description="Não foi possível carregar a lista agora. Tente novamente."
+                    action={{ label: "Tentar novamente", onClick: () => refetch() }}
+                  />
+                </TableCell>
+              </TableRow>
+            ) : invalidData ? (
+              <TableRow>
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState
+                    icon="AlertTriangle"
+                    title="Formato de dados inesperado"
+                    description="A resposta não está no formato esperado. Tente novamente."
+                    action={{ label: "Recarregar", onClick: () => refetch() }}
+                  />
+                </TableCell>
+              </TableRow>
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="p-0">
                   <EmptyState
@@ -180,7 +209,7 @@ export function UserList() {
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((user) => (
+              rows.map((user) => (
                 <TableRow key={user.id} className={selectedIds.has(user.id) ? "bg-muted" : ""}>
                   <TableCell>
                     <input
@@ -224,17 +253,17 @@ export function UserList() {
         </Table>
       </div>
 
-      {data && data.pagination.totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Página {data.pagination.page} de {data.pagination.totalPages}
+            Página {currentPage} de {totalPages}
           </p>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
+              disabled={currentPage === 1}
             >
               Anterior
             </Button>
@@ -242,7 +271,7 @@ export function UserList() {
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => p + 1)}
-              disabled={page === data.pagination.totalPages}
+              disabled={currentPage === totalPages}
             >
               Próxima
             </Button>
@@ -269,6 +298,10 @@ export function UserList() {
         description="Tem certeza que deseja remover este usuário? Esta ação pode ser desfeita."
         isLoading={deleteUser.isPending}
       />
+
+      <div className="pt-8">
+        <InvitationList />
+      </div>
     </div>
   )
 }
