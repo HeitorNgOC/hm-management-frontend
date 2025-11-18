@@ -8,11 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Plus, Trash2, Edit2 } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { serviceService } from "@/lib/services/service.service"
+import { ServiceFormDialog } from "@/components/services/service-form-dialog"
 import { EmptyState, SkeletonTable, BulkActionBar } from "@/components/crud"
 
 export default function ServicesPage() {
   const [search, setSearch] = useState("")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: services, isLoading } = useQuery({
@@ -51,9 +54,8 @@ export default function ServicesPage() {
     }
   }
 
-  if (isLoading) {
-    return <SkeletonTable />
-  }
+  // Render the page normally and show the skeleton where the list is to avoid emitting
+  // <tr> elements directly under a <div> (which causes hydration errors).
 
   return (
     <ProtectedRoute requiredPermissions={["appointments.view"]}>
@@ -63,7 +65,7 @@ export default function ServicesPage() {
             <h1 className="text-3xl font-bold">Serviços</h1>
             <p className="text-muted-foreground">Gerencie os serviços disponíveis</p>
           </div>
-          <Button>
+          <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Serviço
           </Button>
@@ -94,7 +96,15 @@ export default function ServicesPage() {
               />
             )}
 
-            {!services || services.length === 0 ? (
+            {isLoading ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <tbody>
+                    <SkeletonTable rows={5} columns={3} />
+                  </tbody>
+                </table>
+              </div>
+            ) : !services || services.length === 0 ? (
               <EmptyState
                 title="Nenhum serviço cadastrado"
                 description="Comece adicionando um novo serviço para sua empresa"
@@ -119,7 +129,7 @@ export default function ServicesPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="ghost">
+                      <Button size="sm" variant="ghost" onClick={() => setEditingServiceId(service.id)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => deleteService.mutate(service.id)}>
@@ -133,6 +143,16 @@ export default function ServicesPage() {
           </CardContent>
         </Card>
       </div>
+        <ServiceFormDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} onSuccess={() => setIsCreateOpen(false)} />
+
+        {editingServiceId && (
+          <ServiceFormDialog
+            open={!!editingServiceId}
+            onOpenChange={(open) => !open && setEditingServiceId(null)}
+            serviceId={editingServiceId!}
+            onSuccess={() => setEditingServiceId(null)}
+          />
+        )}
     </ProtectedRoute>
   )
 }

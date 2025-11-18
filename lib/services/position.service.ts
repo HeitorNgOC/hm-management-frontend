@@ -10,16 +10,21 @@ const positionService = {
       limit,
     })
 
-    const payload = response.data?.data ?? {}
-    const items: Position[] = Array.isArray(payload.items)
-      ? payload.items
-      : Array.isArray(payload.data)
-      ? payload.data
+    // apiClient unwraps envelopes so response.data can be either:
+    // - the inner payload: { items: [...], page, limit, total }
+    // - or an envelope with .data: { items: [...] }
+    const payload = response.data ?? (response.data as any)?.data ?? {}
+
+    const items: Position[] = Array.isArray((payload as any).items)
+      ? (payload as any).items
+      : Array.isArray((payload as any).data)
+      ? (payload as any).data
       : []
-    const currentPage: number = Number(payload.page) || page || 1
-    const pageLimit: number = Number(payload.limit) || limit || 50
-    const total: number = Number(payload.total ?? items.length ?? 0)
-    const totalPages: number = Number(payload.totalPages ?? (pageLimit ? Math.max(1, Math.ceil(total / pageLimit)) : 1))
+
+    const currentPage: number = Number((payload as any).page) || page || 1
+    const pageLimit: number = Number((payload as any).limit) || limit || 50
+    const total: number = Number((payload as any).total ?? items.length ?? 0)
+    const totalPages: number = Number((payload as any).totalPages ?? (pageLimit ? Math.max(1, Math.ceil(total / pageLimit)) : 1))
 
     const normalized: PaginatedResponse<Position> = {
       data: items,
@@ -45,7 +50,8 @@ const positionService = {
   },
 
   updatePosition: async (id: string, data: UpdatePositionRequest) => {
-    const response = await apiClient.patch<ApiResponse<Position>>(`/positions/${id}`, { ...data })
+    // Backend expects POST for update operations. Use the /positions/update route with id and data in body.
+    const response = await apiClient.post<ApiResponse<Position>>(`/positions/update`, { id, ...data })
     return response.data
   },
 

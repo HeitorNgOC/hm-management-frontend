@@ -138,8 +138,8 @@ export default function NFSePage() {
                     <div className="flex items-center gap-4">
                       <Badge className={statusColors[nfse.status]}>
                         {nfse.status === "issued" && "Emitida"}
-                        {nfse.status === "draft" && "Rascunho"}
-                        {nfse.status === "cancelled" && "Cancelada"}
+                        {(nfse.status as string) === "draft" && "Rascunho"}
+                        {(nfse.status as string) === "cancelled" && "Cancelada"}
                       </Badge>
                       <p className="font-bold">R$ {nfse.amount.toFixed(2)}</p>
                       <Button size="sm" variant="ghost">

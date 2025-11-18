@@ -1,3 +1,3 @@
-// <CHANGE> Removing barrel export - services will be imported directly from individual files
-// This avoids module resolution issues in the build system
-</merged_code
+// Barrel export removed intentionally.
+// Import services directly from their individual files, e.g.:
+// import { authService } from "lib/services/auth.service"

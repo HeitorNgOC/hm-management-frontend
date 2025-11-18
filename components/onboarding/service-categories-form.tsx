@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useForm } from "react-hook-form"
+import type { Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { serviceCategorySchema, type ServiceCategoryFormData } from "@/lib/validations/company"
 import type { ServiceCategory } from "@/lib/types/company"
@@ -33,7 +34,8 @@ export function ServiceCategoriesForm({ onSubmit, onBack, defaultValues, isLoadi
     reset,
     formState: { errors },
   } = useForm<ServiceCategoryFormData>({
-    resolver: zodResolver(serviceCategorySchema),
+    resolver: zodResolver(serviceCategorySchema) as Resolver<ServiceCategoryFormData>,
+    defaultValues: { name: "", description: "", isActive: true, order: 0 },
   })
 
   const handleAddCategory = (data: ServiceCategoryFormData) => {

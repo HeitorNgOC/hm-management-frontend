@@ -1,6 +1,7 @@
 "use client"
 
 import { useForm } from "react-hook-form"
+import type { Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useCreateTicket } from "@/hooks/use-queue"
 import { createTicketSchema, type CreateTicketFormData } from "@/lib/validations/queue"
@@ -21,7 +22,7 @@ export function TicketFormDialog({ open, onOpenChange, onSuccess }: TicketFormDi
   const createTicket = useCreateTicket()
 
   const form = useForm<CreateTicketFormData>({
-    resolver: zodResolver(createTicketSchema),
+    resolver: zodResolver(createTicketSchema) as Resolver<CreateTicketFormData>,
     defaultValues: {
       clientId: "",
       serviceType: "",

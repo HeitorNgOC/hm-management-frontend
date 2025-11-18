@@ -15,15 +15,15 @@ export function CurrentSubscription() {
     return <div className="text-center py-8">Carregando...</div>
   }
 
-  if (!data?.data) {
+  const subscription = (data as any)?.data ?? (data as any) ?? null
+
+  if (!subscription) {
     return (
       <Card className="p-6">
         <p className="text-muted-foreground">Você não possui uma assinatura ativa</p>
       </Card>
     )
   }
-
-  const subscription = data.data
 
   const getStatusBadge = (status: string) => {
     const variants = {

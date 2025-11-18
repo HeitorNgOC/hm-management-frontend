@@ -9,12 +9,20 @@ import type {
 const employeeTimeIntervalService = {
   getAll: async (filters?: EmployeeTimeIntervalFilters) => {
     const response = await apiClient.get("/employee-time-intervals", { params: filters })
-    return response.data as EmployeeTimeInterval[]
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as EmployeeTimeInterval[]
+    if (Array.isArray(payload.data)) return payload.data as EmployeeTimeInterval[]
+    if (Array.isArray(payload.items)) return payload.items as EmployeeTimeInterval[]
+    return [] as EmployeeTimeInterval[]
   },
 
   getByEmployeeId: async (employeeId: string) => {
     const response = await apiClient.get(`/employee-time-intervals/employee/${employeeId}`)
-    return response.data as EmployeeTimeInterval[]
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as EmployeeTimeInterval[]
+    if (Array.isArray(payload.data)) return payload.data as EmployeeTimeInterval[]
+    if (Array.isArray(payload.items)) return payload.items as EmployeeTimeInterval[]
+    return [] as EmployeeTimeInterval[]
   },
 
   getById: async (id: string) => {

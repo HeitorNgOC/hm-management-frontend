@@ -44,20 +44,20 @@ export function InventoryFormDialog({ open, onOpenChange, itemId, onSuccess }: I
   })
 
   useEffect(() => {
-    if (itemData?.data) {
+    if (itemData) {
       form.reset({
-        name: itemData.data.name,
-        description: itemData.data.description || "",
-        sku: itemData.data.sku,
-        categoryId: itemData.data.categoryId,
-        quantity: itemData.data.quantity,
-        minQuantity: itemData.data.minQuantity,
-        unit: itemData.data.unit,
-        costPrice: itemData.data.costPrice,
-        sellPrice: itemData.data.sellPrice,
-        supplierId: itemData.data.supplierId,
-        location: itemData.data.location,
-        expirationDate: itemData.data.expirationDate?.split("T")[0],
+        name: itemData.name,
+        description: itemData.description || "",
+        sku: itemData.sku,
+        categoryId: itemData.categoryId,
+        quantity: itemData.quantity,
+        minQuantity: itemData.minQuantity,
+        unit: itemData.unit,
+        costPrice: itemData.costPrice,
+        sellPrice: itemData.sellPrice,
+        supplierId: itemData.supplierId,
+        location: itemData.location,
+        expirationDate: itemData.expirationDate?.split("T")[0],
       })
     }
   }, [itemData, form])

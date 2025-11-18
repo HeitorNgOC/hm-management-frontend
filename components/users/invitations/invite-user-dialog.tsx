@@ -21,6 +21,14 @@ interface InviteUserDialogProps {
 export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) {
   const { data: positionsData, isError: isPositionsError, refetch: refetchPositions, isLoading: isPositionsLoading } =
     usePositions(1, 100, { enabled: open })
+  const positionsPayload = positionsData as any
+  const positions = Array.isArray(positionsPayload)
+    ? positionsPayload
+    : Array.isArray(positionsPayload?.data)
+    ? positionsPayload.data
+    : Array.isArray(positionsPayload?.items)
+    ? positionsPayload.items
+    : []
   const createInvitation = useCreateInvitation()
 
   const {
@@ -40,7 +48,13 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
   }, [open, reset])
 
   const onSubmit = async (data: CreateInvitationFormData) => {
-    await createInvitation.mutateAsync(data)
+    const payload = {
+      ...data,
+      // backend expects uppercase role values (UserRole). Map if provided.
+      role: data.role ? (data.role.toUpperCase() as any) : undefined,
+    }
+
+    await createInvitation.mutateAsync(payload)
     onOpenChange(false)
   }
 
@@ -96,8 +110,8 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
                   <SelectValue placeholder={isPositionsLoading ? "Carregando..." : isPositionsError ? "Erro ao carregar" : "Selecionar cargo"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.isArray(positionsData?.data) ? (
-                    positionsData!.data.map((p) => (
+                  {positions.length > 0 ? (
+                    positions.map((p: any) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
                       </SelectItem>

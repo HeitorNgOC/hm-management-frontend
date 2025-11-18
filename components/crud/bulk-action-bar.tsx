@@ -13,10 +13,13 @@ interface BulkAction {
 
 interface BulkActionBarProps {
   selectedCount: number
-  totalCount: number
-  onSelectAll: () => void
-  onClearSelection: () => void
-  actions: BulkAction[]
+  totalCount?: number
+  onSelectAll?: () => void
+  onClearSelection?: () => void
+  actions?: BulkAction[]
+  // optional convenience callbacks used in some pages
+  onDelete?: () => void
+  onCancel?: () => void
 }
 
 export function BulkActionBar({
@@ -25,8 +28,10 @@ export function BulkActionBar({
   onSelectAll,
   onClearSelection,
   actions,
+  onDelete,
+  onCancel,
 }: BulkActionBarProps) {
-  const isAllSelected = selectedCount === totalCount && totalCount > 0
+  const isAllSelected = typeof totalCount === "number" && selectedCount === totalCount && totalCount > 0
 
   return (
     <div
@@ -37,18 +42,18 @@ export function BulkActionBar({
     >
       <div className="flex items-center gap-4">
         <button
-          onClick={onSelectAll}
+          onClick={() => onSelectAll?.()}
           className={cn(
             "text-sm font-medium cursor-pointer",
             isAllSelected ? "text-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          {isAllSelected ? "Desselecionar tudo" : "Selecionar tudo"} ({selectedCount} de {totalCount})
+          {isAllSelected ? "Desselecionar tudo" : "Selecionar tudo"} ({selectedCount} de {totalCount ?? selectedCount})
         </button>
       </div>
 
       <div className="flex items-center gap-2">
-        {actions.map((action, index) => (
+        {actions?.map((action, index) => (
           <Button
             key={index}
             variant={action.variant || "default"}
@@ -59,9 +64,22 @@ export function BulkActionBar({
             {action.label}
           </Button>
         ))}
-        <Button variant="ghost" size="sm" onClick={onClearSelection}>
-          <X className="h-4 w-4" />
-        </Button>
+        {onDelete && (
+          <Button variant="destructive" size="sm" onClick={onDelete}>
+            Excluir
+          </Button>
+        )}
+        {onCancel && (
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Cancelar
+          </Button>
+        )}
+        {onClearSelection && (
+          <Button variant="ghost" size="sm" onClick={onClearSelection}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+        
       </div>
     </div>
   )

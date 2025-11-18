@@ -4,7 +4,13 @@ import type { Service, CreateServiceRequest, UpdateServiceRequest, ServiceFilter
 const serviceService = {
   getAll: async (filters?: ServiceFilters) => {
     const response = await apiClient.get("/services", { params: filters })
-    return response.data as Service[]
+    // apiClient unwraps envelopes in most cases, but some endpoints may still return { data: [...] } or { items: [...] }
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as Service[]
+    if (Array.isArray(payload.data)) return payload.data as Service[]
+    if (Array.isArray(payload.items)) return payload.items as Service[]
+    // fallback: if response is a paginated object with data property absent, but contains pagination->data may be nested
+    return [] as Service[]
   },
 
   getById: async (id: string) => {

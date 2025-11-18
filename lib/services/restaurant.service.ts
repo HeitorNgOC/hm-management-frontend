@@ -13,27 +13,27 @@ import type { ApiResponse, PaginatedResponse } from "@/lib/types/common"
 const restaurantService = {
   // Tables
   getTables: async () => {
-    const response = await apiClient.get<ApiResponse<Table[]>>("/tables")
+    const response = await apiClient.get<Table[]>("/tables")
     return response.data
   },
 
   getTableById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<Table>>(`/tables/${id}`)
+    const response = await apiClient.get<Table>(`/tables/${id}`)
     return response.data
   },
 
   createTable: async (data: CreateTableRequest) => {
-    const response = await apiClient.post<ApiResponse<Table>>("/tables", data)
+    const response = await apiClient.post<Table>("/tables", data)
     return response.data
   },
 
   updateTable: async (id: string, data: UpdateTableRequest) => {
-    const response = await apiClient.patch<ApiResponse<Table>>(`/tables/${id}`, data)
+    const response = await apiClient.patch<Table>(`/tables/${id}`, data)
     return response.data
   },
 
   deleteTable: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/tables/${id}`)
+    const response = await apiClient.delete<void>(`/tables/${id}`)
     return response.data
   },
 
@@ -49,32 +49,32 @@ const restaurantService = {
   },
 
   getOrderById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<Order>>(`/orders/${id}`)
+    const response = await apiClient.get<Order>(`/orders/${id}`)
     return response.data
   },
 
   createOrder: async (data: CreateOrderRequest) => {
-    const response = await apiClient.post<ApiResponse<Order>>("/orders", data)
+    const response = await apiClient.post<Order>("/orders", data)
     return response.data
   },
 
   updateOrder: async (id: string, data: UpdateOrderRequest) => {
-    const response = await apiClient.patch<ApiResponse<Order>>(`/orders/${id}`, data)
+    const response = await apiClient.patch<Order>(`/orders/${id}`, data)
     return response.data
   },
 
   addOrderItem: async (orderId: string, data: AddOrderItemRequest) => {
-    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/items`, data)
+    const response = await apiClient.post<Order>(`/orders/${orderId}/items`, data)
     return response.data
   },
 
   removeOrderItem: async (orderId: string, itemId: string) => {
-    const response = await apiClient.delete<ApiResponse<Order>>(`/orders/${orderId}/items/${itemId}`)
+    const response = await apiClient.delete<Order>(`/orders/${orderId}/items/${itemId}`)
     return response.data
   },
 
   closeOrder: async (id: string) => {
-    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${id}/close`)
+    const response = await apiClient.post<Order>(`/orders/${id}/close`)
     return response.data
   },
 }

@@ -21,6 +21,8 @@ export function InventoryList() {
 
   const { data, isLoading } = useInventoryItems(filters, page)
   const deleteItem = useDeleteInventoryItem()
+  const payload = data as any
+  const rows = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
 
   const handleSearch = (search: string) => {
     setFilters((prev) => ({ ...prev, search }))
@@ -81,6 +83,7 @@ export function InventoryList() {
               <TableHead className="w-[70px]"></TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {isLoading ? (
               <TableRow>
@@ -88,14 +91,14 @@ export function InventoryList() {
                   Carregando...
                 </TableCell>
               </TableRow>
-            ) : data?.data.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center">
                   Nenhum item encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((item) => (
+              rows.map((item: any) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-mono text-sm">{item.sku}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
@@ -132,10 +135,10 @@ export function InventoryList() {
         </Table>
       </div>
 
-      {data && data.pagination.totalPages > 1 && (
+      {data && (payload?.pagination?.totalPages ?? 0) > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Página {data.pagination.currentPage} de {data.pagination.totalPages}
+            Página {payload?.pagination?.page ?? page} de {payload?.pagination?.totalPages}
           </p>
           <div className="flex gap-2">
             <Button
@@ -150,7 +153,7 @@ export function InventoryList() {
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => p + 1)}
-              disabled={page === data.pagination.totalPages}
+              disabled={page === (payload?.pagination?.totalPages ?? 1)}
             >
               Próxima
             </Button>

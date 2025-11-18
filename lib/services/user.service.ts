@@ -11,7 +11,9 @@ const userService = {
       ...(filters || {}),
     })
 
-    const payload = response.data?.data ?? {}
+    // apiClient now unwraps envelope responses (response.data = envelope.data)
+    // but some endpoints may still return nested shapes. Normalize here.
+  const payload: any = response.data ?? {}
     const rawItems: any[] = Array.isArray(payload.items)
       ? payload.items
       : Array.isArray(payload.data)
@@ -51,21 +53,45 @@ const userService = {
 
   createUser: async (data: CreateUserRequest) => {
     const response = await apiClient.post<ApiResponse<User>>(`/users`, { ...data })
+    if (response?.status && response.status >= 400) {
+      const message = (response.data as any)?.message || 'Erro ao criar usuário'
+      const err: any = new Error(message)
+      err.response = response
+      throw err
+    }
     return response.data
   },
 
   updateUser: async (id: string, data: UpdateUserRequest) => {
     const response = await apiClient.patch<ApiResponse<User>>(`/users/${id}`, { ...data })
+    if (response?.status && response.status >= 400) {
+      const message = (response.data as any)?.message || 'Erro ao atualizar usuário'
+      const err: any = new Error(message)
+      err.response = response
+      throw err
+    }
     return response.data
   },
 
   deleteUser: async (id: string) => {
     const response = await apiClient.post<ApiResponse<void>>(`/users/delete`, { id })
+    if (response?.status && response.status >= 400) {
+      const message = (response.data as any)?.message || 'Erro ao remover usuário'
+      const err: any = new Error(message)
+      err.response = response
+      throw err
+    }
     return response.data
   },
 
   updateUserStatus: async (id: string, status: "active" | "inactive" | "on_leave") => {
     const response = await apiClient.post<ApiResponse<User>>(`/users/status`, { id, status })
+    if (response?.status && response.status >= 400) {
+      const message = (response.data as any)?.message || 'Erro ao atualizar status'
+      const err: any = new Error(message)
+      err.response = response
+      throw err
+    }
     return response.data
   },
 }

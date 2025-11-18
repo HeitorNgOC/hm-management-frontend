@@ -4,7 +4,11 @@ import type { Package, CreatePackageRequest, UpdatePackageRequest, PackageFilter
 const packageService = {
   getAll: async (filters?: PackageFilters) => {
     const response = await apiClient.get("/packages", { params: filters })
-    return response.data as Package[]
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as Package[]
+    if (Array.isArray(payload.data)) return payload.data as Package[]
+    if (Array.isArray(payload.items)) return payload.items as Package[]
+    return [] as Package[]
   },
 
   getById: async (id: string) => {

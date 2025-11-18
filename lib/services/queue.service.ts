@@ -30,7 +30,7 @@ export const queueTicketService = {
   },
 
   getTicketById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<QueueTicket>>(`/queue/tickets/${id}`)
+    const response = await apiClient.get<QueueTicket>(`/queue/tickets/${id}`)
     return response.data
   },
 
@@ -51,7 +51,7 @@ export const queueTicketService = {
 
   getStats: async (date?: string) => {
     const params = date ? `?date=${date}` : ""
-    const response = await apiClient.get<ApiResponse<QueueStats>>(`/queue/stats${params}`)
+    const response = await apiClient.get<QueueStats>(`/queue/stats${params}`)
     return response.data
   },
 }
@@ -70,7 +70,7 @@ export const queueDeskService = {
   },
 
   getDeskById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<QueueDesk>>(`/queue/desks/${id}`)
+    const response = await apiClient.get<QueueDesk>(`/queue/desks/${id}`)
     return response.data
   },
 
@@ -102,7 +102,7 @@ export const queueDeskService = {
 
 export const queueSettingsService = {
   getSettings: async () => {
-    const response = await apiClient.get<ApiResponse<QueueSettings>>("/queue/settings")
+    const response = await apiClient.get<QueueSettings>("/queue/settings")
     return response.data
   },
 

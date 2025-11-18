@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { dashboardService } from "@/lib/services/dashboard.service"
+import { ensureArray } from "@/lib/utils"
 import type { Widget } from "@/lib/types/dashboard"
 import { useToast } from "@/hooks/use-toast"
 
@@ -28,6 +29,7 @@ export function useRevenueData(period: "week" | "month" | "year" = "month") {
   return useQuery({
     queryKey: dashboardKeys.revenue(period),
     queryFn: () => dashboardService.getRevenueData(period),
+    select: (data) => ensureArray(data),
   })
 }
 
@@ -35,6 +37,7 @@ export function useAppointmentsByStatus() {
   return useQuery({
     queryKey: dashboardKeys.appointmentsByStatus(),
     queryFn: () => dashboardService.getAppointmentsByStatus(),
+    select: (data) => ensureArray(data),
   })
 }
 
@@ -42,6 +45,7 @@ export function useTopServices(limit = 5) {
   return useQuery({
     queryKey: dashboardKeys.topServices(limit),
     queryFn: () => dashboardService.getTopServices(limit),
+    select: (data) => ensureArray(data),
   })
 }
 
@@ -49,6 +53,7 @@ export function useEmployeePerformance(limit = 5) {
   return useQuery({
     queryKey: dashboardKeys.employeePerformance(limit),
     queryFn: () => dashboardService.getEmployeePerformance(limit),
+    select: (data) => ensureArray(data),
   })
 }
 
@@ -56,6 +61,7 @@ export function useClientGrowth(period: "week" | "month" | "year" = "month") {
   return useQuery({
     queryKey: dashboardKeys.clientGrowth(period),
     queryFn: () => dashboardService.getClientGrowth(period),
+    select: (data) => ensureArray(data),
   })
 }
 

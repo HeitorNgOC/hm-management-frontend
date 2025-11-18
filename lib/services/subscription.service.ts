@@ -11,27 +11,27 @@ import type { ApiResponse, PaginatedResponse } from "@/lib/types/common"
 
 const subscriptionService = {
   getPlans: async () => {
-    const response = await apiClient.get<ApiResponse<SubscriptionPlan[]>>("/subscription/plans")
+    const response = await apiClient.get<SubscriptionPlan[]>("/subscription/plans")
     return response.data
   },
 
   getCurrentSubscription: async () => {
-    const response = await apiClient.get<ApiResponse<Subscription>>("/subscription/current")
+    const response = await apiClient.get<Subscription>("/subscription/current")
     return response.data
   },
 
   createSubscription: async (data: CreateSubscriptionRequest) => {
-    const response = await apiClient.post<ApiResponse<Subscription>>("/subscription", data)
+    const response = await apiClient.post<Subscription>("/subscription", data)
     return response.data
   },
 
   updateSubscription: async (id: string, data: UpdateSubscriptionRequest) => {
-    const response = await apiClient.patch<ApiResponse<Subscription>>(`/subscription/${id}`, data)
+    const response = await apiClient.patch<Subscription>(`/subscription/${id}`, data)
     return response.data
   },
 
   cancelSubscription: async (id: string) => {
-    const response = await apiClient.post<ApiResponse<Subscription>>(`/subscription/${id}/cancel`)
+    const response = await apiClient.post<Subscription>(`/subscription/${id}/cancel`)
     return response.data
   },
 
@@ -41,7 +41,7 @@ const subscriptionService = {
   },
 
   createPayment: async (data: CreatePaymentRequest) => {
-    const response = await apiClient.post<ApiResponse<Payment>>("/payments", data)
+    const response = await apiClient.post<Payment>("/payments", data)
     return response.data
   },
 }

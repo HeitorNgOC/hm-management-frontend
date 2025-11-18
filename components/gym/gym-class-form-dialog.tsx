@@ -37,6 +37,10 @@ export function GymClassFormDialog({ open, onOpenChange, classId, onSuccess }: G
   const { data: classData } = useGymClass(classId || "")
   const { data: modalitiesData } = useModalities({}, 1, 100)
   const { data: usersData } = useUsers({}, 1, 100)
+  const modalitiesPayload = modalitiesData as any
+  const modalities = Array.isArray(modalitiesPayload) ? modalitiesPayload : modalitiesPayload?.data ?? modalitiesPayload?.items ?? []
+  const usersPayload = usersData as any
+  const users = Array.isArray(usersPayload) ? usersPayload : usersPayload?.data ?? usersPayload?.items ?? []
   const createGymClass = useCreateGymClass()
   const updateGymClass = useUpdateGymClass()
 
@@ -62,18 +66,18 @@ export function GymClassFormDialog({ open, onOpenChange, classId, onSuccess }: G
   })
 
   useEffect(() => {
-    if (classData?.data) {
+    if (classData) {
       form.reset({
-        modalityId: classData.data.modalityId,
-        name: classData.data.name,
-        description: classData.data.description || "",
-        instructorIds: classData.data.instructorIds,
-        schedule: classData.data.schedule,
-        maxStudents: classData.data.maxStudents,
-        startDate: classData.data.startDate.split("T")[0],
-        endDate: classData.data.endDate ? classData.data.endDate.split("T")[0] : "",
+        modalityId: classData.modalityId,
+        name: classData.name,
+        description: classData.description || "",
+        instructorIds: classData.instructorIds,
+        schedule: classData.schedule,
+        maxStudents: classData.maxStudents,
+        startDate: classData.startDate.split("T")[0],
+        endDate: classData.endDate ? classData.endDate.split("T")[0] : "",
       })
-      setSelectedInstructors(classData.data.instructorIds)
+      setSelectedInstructors(classData.instructorIds)
     }
   }, [classData, form])
 
@@ -138,7 +142,7 @@ export function GymClassFormDialog({ open, onOpenChange, classId, onSuccess }: G
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {modalitiesData?.data.map((modality) => (
+                        {modalities.map((modality: any) => (
                           <SelectItem key={modality.id} value={modality.id}>
                             {modality.name}
                           </SelectItem>
@@ -210,9 +214,7 @@ export function GymClassFormDialog({ open, onOpenChange, classId, onSuccess }: G
             <div>
               <FormLabel>Instrutores</FormLabel>
               <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
-                {usersData?.data
-                  .filter((user) => user.role === "employee" || user.role === "manager")
-                  .map((user) => (
+                {users.filter((user: any) => user.role === "EMPLOYEE" || user.role === "MANAGER").map((user: any) => (
                     <div key={user.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`instructor-${user.id}`}

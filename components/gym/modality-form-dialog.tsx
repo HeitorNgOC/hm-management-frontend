@@ -38,14 +38,15 @@ export function ModalityFormDialog({ open, onOpenChange, modalityId, onSuccess }
   })
 
   useEffect(() => {
-    if (modalityData?.data) {
+    const src = (modalityData as any)?.data ?? (modalityData as any)
+    if (src) {
       form.reset({
-        name: modalityData.data.name,
-        description: modalityData.data.description || "",
-        color: modalityData.data.color || "#3b82f6",
-        icon: modalityData.data.icon || "",
-        maxStudentsPerClass: modalityData.data.maxStudentsPerClass,
-        durationMinutes: modalityData.data.durationMinutes,
+        name: src.name,
+        description: src.description || "",
+        color: src.color || "#3b82f6",
+        icon: src.icon || "",
+        maxStudentsPerClass: src.maxStudentsPerClass,
+        durationMinutes: src.durationMinutes,
       })
     }
   }, [modalityData, form])

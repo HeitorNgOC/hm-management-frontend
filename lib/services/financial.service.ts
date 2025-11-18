@@ -8,32 +8,32 @@ import type {
   CreateTransactionRequest,
   TransactionFilters,
 } from "@/lib/types/financial"
-import type { ApiResponse, PaginatedResponse } from "@/lib/types/common"
+import type { PaginatedResponse } from "@/lib/types/common"
 
 const financialService = {
   // Cash Register
-  getCurrentCashRegister: async () => {
-    const response = await apiClient.get<ApiResponse<CashRegister>>("/cash-register/current")
+  getCurrentCashRegister: async (): Promise<CashRegister> => {
+    const response = await apiClient.get<CashRegister>("/cash-register/current")
     return response.data
   },
 
-  getCashRegisters: async (page = 1, limit = 20) => {
+  getCashRegisters: async (page = 1, limit = 20): Promise<PaginatedResponse<CashRegister>> => {
     const response = await apiClient.get<PaginatedResponse<CashRegister>>(`/cash-register?page=${page}&limit=${limit}`)
     return response.data
   },
 
-  openCashRegister: async (data: CreateCashRegisterRequest) => {
-    const response = await apiClient.post<ApiResponse<CashRegister>>("/cash-register/open", data)
+  openCashRegister: async (data: CreateCashRegisterRequest): Promise<CashRegister> => {
+    const response = await apiClient.post<CashRegister>("/cash-register/open", data)
     return response.data
   },
 
-  closeCashRegister: async (id: string, data: CloseCashRegisterRequest) => {
-    const response = await apiClient.post<ApiResponse<CashRegister>>(`/cash-register/${id}/close`, data)
+  closeCashRegister: async (id: string, data: CloseCashRegisterRequest): Promise<CashRegister> => {
+    const response = await apiClient.post<CashRegister>(`/cash-register/${id}/close`, data)
     return response.data
   },
 
   // Transactions
-  getTransactions: async (filters?: TransactionFilters, page = 1, limit = 20) => {
+  getTransactions: async (filters?: TransactionFilters, page = 1, limit = 20): Promise<PaginatedResponse<Transaction>> => {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -49,21 +49,19 @@ const financialService = {
     return response.data
   },
 
-  createTransaction: async (data: CreateTransactionRequest) => {
-    const response = await apiClient.post<ApiResponse<Transaction>>("/transactions", data)
+  createTransaction: async (data: CreateTransactionRequest): Promise<Transaction> => {
+    const response = await apiClient.post<Transaction>("/transactions", data)
     return response.data
   },
 
-  deleteTransaction: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/transactions/${id}`)
+  deleteTransaction: async (id: string): Promise<void> => {
+    const response = await apiClient.delete<void>(`/transactions/${id}`)
     return response.data
   },
 
   // Summary
-  getFinancialSummary: async (startDate: string, endDate: string) => {
-    const response = await apiClient.get<ApiResponse<FinancialSummary>>(
-      `/financial/summary?startDate=${startDate}&endDate=${endDate}`,
-    )
+  getFinancialSummary: async (startDate: string, endDate: string): Promise<FinancialSummary> => {
+    const response = await apiClient.get<FinancialSummary>(`/financial/summary?startDate=${startDate}&endDate=${endDate}`)
     return response.data
   },
 }

@@ -51,15 +51,19 @@ export function AppointmentFormDialog({
 
   const { data: availableSlots } = useAvailableSlots(watchedEmployeeId, watchedDate, watchedServiceId)
 
+  const slotsPayload = availableSlots as any
+  const slots = Array.isArray(slotsPayload) ? slotsPayload : Array.isArray(slotsPayload?.data) ? slotsPayload.data : Array.isArray(slotsPayload?.items) ? slotsPayload.items : []
+
   useEffect(() => {
-    if (appointmentData?.data) {
+    const src = (appointmentData as any)?.data ?? (appointmentData as any)
+    if (src) {
       form.reset({
-        clientId: appointmentData.data.clientId,
-        employeeId: appointmentData.data.employeeId,
-        serviceId: appointmentData.data.serviceId,
-        date: appointmentData.data.date.split("T")[0],
-        startTime: appointmentData.data.startTime,
-        notes: appointmentData.data.notes || "",
+        clientId: src.clientId,
+        employeeId: src.employeeId,
+        serviceId: src.serviceId,
+        date: src.date.split("T")[0],
+        startTime: src.startTime,
+        notes: src.notes || "",
       })
     }
   }, [appointmentData, form])
@@ -171,7 +175,7 @@ export function AppointmentFormDialog({
               />
             </div>
 
-            {availableSlots?.data && availableSlots.data.length > 0 && (
+            {slots && slots.length > 0 && (
               <FormField
                 control={form.control}
                 name="startTime"
@@ -179,7 +183,7 @@ export function AppointmentFormDialog({
                   <FormItem>
                     <FormLabel>Horário Disponível</FormLabel>
                     <div className="flex flex-wrap gap-2">
-                      {availableSlots.data.map((slot) => (
+                      {slots.map((slot: any) => (
                         <Badge
                           key={slot}
                           variant={field.value === slot ? "default" : "outline"}

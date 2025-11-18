@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import type { ChangeEvent } from "react"
+import type { Resolver } from "react-hook-form"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -56,7 +58,7 @@ export function TimeIntervalForm({ employeeId, defaultValues, onSubmit, isLoadin
     watch,
     formState: { errors },
   } = useForm<TimeIntervalFormData>({
-    resolver: zodResolver(timeIntervalSchema),
+    resolver: zodResolver(timeIntervalSchema) as unknown as Resolver<TimeIntervalFormData>,
     defaultValues: {
       dayOfWeek: defaultValues?.dayOfWeek ?? 1,
       startTime: defaultValues?.startTime ?? "09:00",
@@ -114,7 +116,7 @@ export function TimeIntervalForm({ employeeId, defaultValues, onSubmit, isLoadin
               </div>
 
               <div className="flex items-center gap-2">
-                <Checkbox id="hasBreak" checked={hasBreak} onChange={(e) => setHasBreak(e.target.checked)} />
+                <Checkbox id="hasBreak" checked={hasBreak} onCheckedChange={(val) => setHasBreak(Boolean(val))} />
                 <Label htmlFor="hasBreak" className="cursor-pointer">
                   Adicionar intervalo
                 </Label>

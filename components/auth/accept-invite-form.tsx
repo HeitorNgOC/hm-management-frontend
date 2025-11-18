@@ -11,8 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAcceptInvite } from "@/hooks/use-iam"
-import { authService } from "@/lib/services/auth.service"
-import { storeTokens } from "@/lib/utils/token"
+import { useAuth } from "@/contexts/auth-context"
 
 export function AcceptInviteForm() {
   const searchParams = useSearchParams()
@@ -31,21 +30,25 @@ export function AcceptInviteForm() {
     resolver: zodResolver(acceptInviteSchema),
   })
 
+  const { updateSessionWithInvite } = useAuth()
+
   const onSubmit = async (data: AcceptInviteFormData) => {
     const { confirmPassword, ...payload } = data
-    const resp = await acceptInvite.mutateAsync({ ...payload, inviteToken })
-    // Store tokens and seed session with returned user (has companyId)
-    storeTokens(resp.token.token, resp.token.refreshToken)
-    try {
-      localStorage.setItem("user", JSON.stringify(resp.user))
-    } catch {}
-    // Fetch full profile with permissions
-    const me = await authService.currentUser()
-    localStorage.setItem("user", JSON.stringify(me))
-    // Redirect by role (basic)
-    if (resp.user.role === "ADMIN") router.push("/admin/dashboard")
-    else if (resp.user.role === "MANAGER") router.push("/manager/dashboard")
-    else router.push("/dashboard")
+    const response = await acceptInvite.mutateAsync({ ...payload, inviteToken })
+
+    // `acceptInvite` returns unwrapped AuthData (or throws).
+    if (!response || !response.token || !response.token.refreshToken) {
+      // If the response doesn't include a refresh token, abort (service should throw on failure).
+      return
+    }
+
+    await updateSessionWithInvite({
+      token: {
+        token: response.token.token,
+        refreshToken: response.token.refreshToken,
+      },
+      user: response.user,
+    })
   }
 
   const tokenMissing = !inviteToken

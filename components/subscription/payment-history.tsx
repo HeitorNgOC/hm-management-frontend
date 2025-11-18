@@ -35,6 +35,11 @@ export function PaymentHistory() {
     return labels[method as keyof typeof labels] || method
   }
 
+  const payload = data as any
+  const payments = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.items) ? payload.items : []
+  const pagination = payload?.pagination ?? {}
+  const currentPage = pagination.page ?? pagination.currentPage ?? 1
+
   return (
     <Card className="p-6">
       <h3 className="text-xl font-bold mb-4">Histórico de Pagamentos</h3>
@@ -54,14 +59,14 @@ export function PaymentHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.data.length === 0 ? (
+              {payments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center">
                     Nenhum pagamento encontrado
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.data.map((payment) => (
+                payments.map((payment: any) => (
                   <TableRow key={payment.id}>
                     <TableCell>{format(new Date(payment.createdAt), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                     <TableCell>{payment.description || "-"}</TableCell>
@@ -74,10 +79,10 @@ export function PaymentHistory() {
             </TableBody>
           </Table>
 
-          {data && data.pagination.totalPages > 1 && (
+          {data && ((pagination.totalPages ?? payload?.pagination?.totalPages) > 1) && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                Página {data.pagination.currentPage} de {data.pagination.totalPages}
+                Página {currentPage} de {pagination.totalPages ?? payload?.pagination?.totalPages}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -92,7 +97,7 @@ export function PaymentHistory() {
                   variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
-                  disabled={page === data.pagination.totalPages}
+                  disabled={page === (pagination.totalPages ?? payload?.pagination?.totalPages)}
                 >
                   Próxima
                 </Button>

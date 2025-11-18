@@ -16,7 +16,7 @@ export function CashRegisterCard() {
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
   const { data, isLoading } = useCurrentCashRegister()
 
-  const cashRegister = data?.data
+  const cashRegister = data
 
   if (isLoading) {
     return (

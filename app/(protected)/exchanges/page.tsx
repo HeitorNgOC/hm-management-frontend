@@ -109,9 +109,9 @@ export default function ExchangesPage() {
         columns={columns}
         isLoading={isLoading}
         pagination={{
-          page: data?.page || 1,
-          totalPages: data?.totalPages || 1,
-          total: data?.total || 0,
+          currentPage: data?.pagination?.page || 1,
+          totalPages: data?.pagination?.totalPages || 1,
+          totalCount: data?.pagination?.total || 0,
         }}
         onPageChange={setPage}
         emptyMessage="Nenhuma troca encontrada"

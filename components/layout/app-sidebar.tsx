@@ -276,7 +276,7 @@ export function AppSidebar() {
               <span>{item.title}</span>
             </SidebarMenuButton>
             <SidebarMenuSub>
-              {item.children.map((child) => (
+              {(item.children || []).map((child) => (
                 <PermissionGate key={child.title} permissions={child.permissions as any} roles={child.roles as any}>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={isActive(child.href)}>

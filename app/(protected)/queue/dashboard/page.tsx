@@ -65,7 +65,7 @@ export default function QueueDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statsData?.data.totalWaiting || 0}</div>
+            <div className="text-2xl font-bold">{statsData?.totalWaiting || 0}</div>
             <p className="text-xs text-muted-foreground">Pessoas na fila</p>
           </CardContent>
         </Card>
@@ -76,7 +76,7 @@ export default function QueueDashboardPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statsData?.data.totalInService || 0}</div>
+            <div className="text-2xl font-bold">{statsData?.totalInService || 0}</div>
             <p className="text-xs text-muted-foreground">Atendimentos ativos</p>
           </CardContent>
         </Card>
@@ -87,7 +87,7 @@ export default function QueueDashboardPage() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statsData?.data.totalCompleted || 0}</div>
+            <div className="text-2xl font-bold">{statsData?.totalCompleted || 0}</div>
             <p className="text-xs text-muted-foreground">Atendimentos finalizados</p>
           </CardContent>
         </Card>
@@ -98,7 +98,7 @@ export default function QueueDashboardPage() {
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statsData?.data.averageWaitTime || 0} min</div>
+            <div className="text-2xl font-bold">{statsData?.averageWaitTime || 0} min</div>
             <p className="text-xs text-muted-foreground">Tempo de espera</p>
           </CardContent>
         </Card>

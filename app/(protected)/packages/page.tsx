@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Plus, Trash2, Edit2, PackageIcon } from "lucide-react"
+import { PackageFormDialog } from "@/components/packages/package-form-dialog"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { packageService } from "@/lib/services/package.service"
 import { EmptyState, BulkActionBar } from "@/components/crud"
@@ -13,6 +14,8 @@ import { EmptyState, BulkActionBar } from "@/components/crud"
 export default function PackagesPage() {
   const [search, setSearch] = useState("")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: packages, isLoading } = useQuery({
@@ -55,7 +58,7 @@ export default function PackagesPage() {
             <h1 className="text-3xl font-bold">Pacotes</h1>
             <p className="text-muted-foreground">Combine serviços e produtos em pacotes com desconto</p>
           </div>
-          <Button>
+          <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Pacote
           </Button>
@@ -116,7 +119,7 @@ export default function PackagesPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" onClick={() => setEditingPackageId(pkg.id)}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => deletePackage.mutate(pkg.id)}>
@@ -130,6 +133,16 @@ export default function PackagesPage() {
             )}
           </CardContent>
         </Card>
+        <PackageFormDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} onSuccess={() => setIsCreateOpen(false)} />
+
+        {editingPackageId && (
+          <PackageFormDialog
+            open={!!editingPackageId}
+            onOpenChange={(open) => !open && setEditingPackageId(null)}
+            packageId={editingPackageId!}
+            onSuccess={() => setEditingPackageId(null)}
+          />
+        )}
       </div>
     </ProtectedRoute>
   )

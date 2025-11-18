@@ -8,6 +8,7 @@ import type { User, Permission } from "@/lib/types/user"
 import { authService } from "@/lib/services/auth.service"
 import { useToast } from "@/hooks/use-toast"
 import { storeTokens, clearTokens, getAuthToken } from "@/lib/utils/token"
+import { parseAuthResponse, safeGetUserLocalStorage, safeSetUserLocalStorage, safeRemoveUserLocalStorage } from "@/lib/utils/auth-utils"
 
 interface AuthContextType {
   user: User | null
@@ -16,6 +17,7 @@ interface AuthContextType {
   isLoading: boolean
   login: (credentials: LoginRequest) => Promise<void>
   register: (data: RegisterRequest) => Promise<void>
+  updateSessionWithInvite: (inviteResponse: { token: { token: string, refreshToken: string }, user: User }) => Promise<void>
   logout: () => Promise<void>
   hasPermission: (permission: Permission) => boolean
   hasAnyPermission: (permissions: Permission[]) => boolean
@@ -36,43 +38,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter()
   const { toast } = useToast()
 
-  // Initialize auth state from localStorage
   useEffect(() => {
     const initAuth = async () => {
       try {
         const storedToken = getAuthToken()
-        const storedUser = typeof window !== "undefined" ? localStorage.getItem("user") : null
-
         if (!storedToken) {
+          setIsLoading(false)
           return
         }
 
-        // Always set token when present
         setToken(storedToken)
 
-        // If we have a cached user, use it immediately for a smoother UX
+        const storedUser = safeGetUserLocalStorage("user")
         if (storedUser) {
-          try {
-            setUser(JSON.parse(storedUser))
-          } catch {}
+          setUser({ ...storedUser, permissions: Array.isArray(storedUser.permissions) ? storedUser.permissions : [] })
         }
 
-        // Verify token by fetching the current user
         try {
-          const currentUser = await authService.currentUser()
-          setUser(currentUser)
-          localStorage.setItem("user", JSON.stringify(currentUser))
-        } catch (error: any) {
-          // Only clear tokens on explicit auth failures
-          const status = error?.response?.status
-          if (status === 401 || status === 403) {
-            console.error("[v0] Token invalid on init:", error)
+          const completeUser = await authService.me()
+          if (!completeUser) {
             clearTokens()
             setToken(null)
             setUser(null)
+            router.push('/login')
+            return
+          }
+
+          const normalized = { ...completeUser, permissions: Array.isArray(completeUser?.permissions) ? completeUser.permissions : [] }
+          setUser(normalized)
+          safeSetUserLocalStorage("user", normalized)
+        } catch (err: any) {
+          const status = err?.response?.status
+          if (status === 401) {
+            // Unauthorized - token invalid: clear session and force login
+            clearTokens()
+            setToken(null)
+            setUser(null)
+            router.push('/login')
+          } else if (status === 403) {
+            // Forbidden - user doesn't have permissions for the requested resource.
+            // Keep the session (don't clear tokens) and send user to unauthorized page.
+            router.push('/unauthorized')
           } else {
-            // Network/server errors: keep existing token and any cached user; allow app to retry later
-            console.warn("[v0] currentUser fetch failed (non-auth). Keeping session:", error?.message || error)
+            console.error("[v0] Error fetching current user:", err)
           }
         }
       } catch (error) {
@@ -87,77 +95,95 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (credentials: LoginRequest) => {
     try {
-      const response = await authService.login(credentials)
+      const res = await authService.login(credentials)
 
-      // Store tokens and fetch full user profile (with permissions)
-      storeTokens(response.token.token, response.token.refreshToken)
-      setToken(response.token.token)
+      // Support multiple token shapes returned by the backend:
+      // - res.token = { token: string, refreshToken?: string }
+      // - res.token = string (access token)
+      // - res = { token: string, refreshToken?: string, user }
+      let jwt: string | undefined = undefined
+      let refreshToken: string | undefined = undefined
 
-      // Seed session with user from login (contains companyId/name)
-      try {
-        localStorage.setItem("user", JSON.stringify(response.user))
-      } catch {}
+      if (res) {
+        if (typeof (res as any).token === "string") {
+          jwt = (res as any).token
+        } else if (res.token && typeof (res.token as any) === "object") {
+          jwt = (res.token as any).token ?? (res.token as any)
+          refreshToken = (res.token as any).refreshToken
+        } else if ((res as any).jwt) {
+          jwt = (res as any).jwt
+          refreshToken = (res as any).refreshToken
+        }
+      }
 
-  // Fetch the complete user object to ensure permissions/relations are present
-  const currentUser = await authService.currentUser()
-      setUser(currentUser)
-      localStorage.setItem("user", JSON.stringify(currentUser))
-
-      toast({
-        title: "Login realizado com sucesso",
-        description: `Bem-vindo, ${response.user.email}!`,
-      })
-
-      // Redirect based on role
-      if (response.user.role === "ADMIN") {
-        router.push("/admin/dashboard")
-      } else if (response.user.role === "MANAGER") {
-        router.push("/manager/dashboard")
+      if (!res || !jwt || !res.user) {
+        toast({
+          title: "Erro ao fazer login",
+          description: "Credenciais inválidas",
+        })
       } else {
-        router.push("/dashboard")
+        storeTokens(jwt, refreshToken)
+        setToken(jwt)
+
+        const normalizedUser = { ...res.user, permissions: Array.isArray(res.user?.permissions) ? res.user.permissions : [] }
+        setUser(normalizedUser)
+        safeSetUserLocalStorage("user", normalizedUser)
+
+        toast({
+          title: "Login realizado com sucesso",
+          description: `Bem-vindo, ${res.user.email}!`,
+        })
+
+        if (res.user.role === "ADMIN") {
+          router.push("/admin/dashboard")
+        } else if (res.user.role === "MANAGER") {
+          router.push("/manager/dashboard")
+        } else {
+          router.push("/dashboard")
+        }
       }
     } catch (error: any) {
       console.error("[v0] Login error:", error)
       toast({
         title: "Erro ao fazer login",
-        description: error.response?.data?.message || "Credenciais inválidas",
-        variant: "destructive",
+        description: "Erro ao tentar conectar ao servidor",
       })
-      throw error
+      return
     }
   }
 
   const register = async (data: RegisterRequest) => {
     try {
-      const response = await authService.register(data)
+      const res = await authService.register(data)
 
-      // Store tokens and fetch full user profile (with permissions)
-      storeTokens(response.token.token, response.token.refreshToken)
-      setToken(response.token.token)
+      if (!res || !res.token || !res.user) {
+        toast({
+          title: "Erro ao criar conta",
+          description: "Não foi possível criar sua conta",
+        })
+      } else {
+        const { token: jwt, refreshToken } = res.token
+        storeTokens(jwt, refreshToken)
+        setToken(jwt)
 
-      // Seed session with user from register (contains companyId/name)
-      try {
-        localStorage.setItem("user", JSON.stringify(response.user))
-      } catch {}
+        const normalizedUser = { ...res.user, permissions: Array.isArray(res.user?.permissions) ? res.user.permissions : [] }
+        setUser(normalizedUser)
+        safeSetUserLocalStorage("user", normalizedUser)
 
-  const currentUser = await authService.currentUser()
-      setUser(currentUser)
-      localStorage.setItem("user", JSON.stringify(currentUser))
+        toast({
+          title: "Cadastro realizado com sucesso",
+          description: `Sua conta foi criada. Bem-vindo(a) ${res.user.name}!`,
+        })
 
-      toast({
-        title: "Cadastro realizado com sucesso",
-        description: "Sua conta foi criada. Bem-vindo!",
-      })
-
-      router.push("/admin/dashboard")
+        router.push("/admin/dashboard")
+      }
     } catch (error: any) {
       console.error("[v0] Register error:", error)
       toast({
         title: "Erro ao criar conta",
-        description: error.response?.data?.message || "Não foi possível criar sua conta",
-        variant: "destructive",
+        description: "Erro ao tentar conectar ao servidor",
       })
-      throw error
+      return
     }
   }
 
@@ -171,6 +197,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setToken(null)
       setUser(null)
 
+      // Remove stored user representation as well
+      safeRemoveUserLocalStorage("user")
+
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso",
@@ -182,22 +211,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const hasPermission = (permission: Permission): boolean => {
     if (!user) return false
-    return user.permissions.includes(permission)
+    const perms = Array.isArray(user.permissions) ? user.permissions : []
+    return perms.includes(permission)
   }
 
   const hasAnyPermission = (permissions: Permission[]): boolean => {
     if (!user) return false
-    return permissions.some((permission) => user.permissions.includes(permission))
+    const perms = Array.isArray(user.permissions) ? user.permissions : []
+    return permissions.some((permission) => perms.includes(permission))
   }
 
   const hasAllPermissions = (permissions: Permission[]): boolean => {
     if (!user) return false
-    return permissions.every((permission) => user.permissions.includes(permission))
+    const perms = Array.isArray(user.permissions) ? user.permissions : []
+    return permissions.every((permission) => perms.includes(permission))
   }
 
   const hasRole = (role: User["role"]): boolean => {
     if (!user) return false
     return user.role === role
+  }
+
+  const updateSessionWithInvite = async (inviteResponse: { token: { token: string, refreshToken: string }, user: User }) => {
+    const { token: newToken, refreshToken } = inviteResponse.token
+    storeTokens(newToken, refreshToken)
+    setToken(newToken)
+
+    const normalizedUser = { ...inviteResponse.user, permissions: Array.isArray(inviteResponse.user?.permissions) ? inviteResponse.user.permissions : [] }
+    setUser(normalizedUser)
+    safeSetUserLocalStorage("user", normalizedUser)
+
+    toast({
+      title: "Conta ativada com sucesso",
+      description: "Bem-vindo! Sua conta foi ativada.",
+    })
+
+    if (inviteResponse.user.role === "ADMIN") {
+      router.push("/admin/dashboard")
+    } else if (inviteResponse.user.role === "MANAGER") {
+      router.push("/manager/dashboard")
+    } else {
+      router.push("/dashboard")
+    }
   }
 
   const value: AuthContextType = {
@@ -207,6 +262,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     login,
     register,
+    updateSessionWithInvite,
     logout,
     hasPermission,
     hasAnyPermission,

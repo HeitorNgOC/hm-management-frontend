@@ -16,6 +16,9 @@ export function PositionList() {
   const { data, isLoading } = usePositions()
   const deletePosition = useDeletePosition()
 
+  const payload = data as any
+  const rows = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+
   const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja remover este cargo?")) {
       await deletePosition.mutateAsync(id)
@@ -52,14 +55,14 @@ export function PositionList() {
                   Carregando...
                 </TableCell>
               </TableRow>
-            ) : data?.data.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center">
                   Nenhum cargo encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((position) => (
+              rows.map((position: any) => (
                 <TableRow key={position.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">

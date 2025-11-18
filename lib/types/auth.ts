@@ -1,57 +1,9 @@
-// User roles in the system
-export type UserRole = "ADMIN" | "MANAGER" | "EMPLOYEE" | "CUSTOMER"
+import type { User, Permission, UserRole, UserStatus } from "./user"
 
-// User status
-export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED"
+import type { ApiResponse } from "./api"
 
-// Permission types
-export type Permission =
-  | "users.view"
-  | "users.create"
-  | "users.edit"
-  | "users.delete"
-  | "positions.view"
-  | "positions.create"
-  | "positions.edit"
-  | "positions.delete"
-  | "appointments.view"
-  | "appointments.create"
-  | "appointments.edit"
-  | "appointments.delete"
-  | "inventory.view"
-  | "inventory.create"
-  | "inventory.edit"
-  | "inventory.delete"
-  | "restaurant.view"
-  | "restaurant.create"
-  | "restaurant.edit"
-  | "restaurant.delete"
-  | "financial.view"
-  | "financial.create"
-  | "financial.edit"
-  | "financial.delete"
-  | "reports.view"
-  | "reports.export"
-  | "settings.view"
-  | "settings.edit"
-  | "payments.view"
-  | "payments.manage"
-
-// User entity
-export interface User {
-  id: string
-  email: string
-  name: string
-  phone?: string
-  avatar?: string
-  role: UserRole
-  status: UserStatus
-  companyId: string
-  positionId?: string
-  permissions: Permission[]
-  createdAt: string
-  updatedAt: string
-}
+// Re-export User from user.ts
+export type { User } from "./user"
 
 // Login request payload
 export interface LoginRequest {
@@ -68,14 +20,27 @@ export interface RegisterRequest {
   companyName: string
 }
 
-// Auth response from API
-export interface AuthResponse {
-  user: User
-  token: {
-    token: string
-    refreshToken?: string
-  }
+/**
+ * Token de autenticação
+ */
+export interface AuthToken {
+  token: string
+  refreshToken?: string
 }
+
+/**
+ * Dados de autenticação bem-sucedida
+ */
+export interface AuthData {
+  user: User
+  token: AuthToken
+}
+
+/**
+ * Resposta de autenticação da API
+ * Estende ApiResponse com AuthData como tipo genérico
+ */
+export type AuthResponse = ApiResponse<AuthData>
 
 // Token payload (decoded JWT)
 export interface TokenPayload {

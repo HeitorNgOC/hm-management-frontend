@@ -33,22 +33,22 @@ export const workoutTemplateService = {
   },
 
   getTemplateById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<WorkoutTemplate>>(`/workout/templates/${id}`)
+    const response = await apiClient.get<WorkoutTemplate>(`/workout/templates/${id}`)
     return response.data
   },
 
   createTemplate: async (data: CreateWorkoutTemplateRequest) => {
-    const response = await apiClient.post<ApiResponse<WorkoutTemplate>>("/workout/templates", data)
+    const response = await apiClient.post<WorkoutTemplate>("/workout/templates", data)
     return response.data
   },
 
   updateTemplate: async (id: string, data: UpdateWorkoutTemplateRequest) => {
-    const response = await apiClient.patch<ApiResponse<WorkoutTemplate>>(`/workout/templates/${id}`, data)
+    const response = await apiClient.patch<WorkoutTemplate>(`/workout/templates/${id}`, data)
     return response.data
   },
 
   deleteTemplate: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/workout/templates/${id}`)
+    const response = await apiClient.delete<void>(`/workout/templates/${id}`)
     return response.data
   },
 }
@@ -69,22 +69,22 @@ export const workoutPlanService = {
   },
 
   getPlanById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<ClientWorkoutPlan>>(`/workout/plans/${id}`)
+    const response = await apiClient.get<ClientWorkoutPlan>(`/workout/plans/${id}`)
     return response.data
   },
 
   createPlan: async (data: CreateWorkoutPlanRequest) => {
-    const response = await apiClient.post<ApiResponse<ClientWorkoutPlan>>("/workout/plans", data)
+    const response = await apiClient.post<ClientWorkoutPlan>("/workout/plans", data)
     return response.data
   },
 
   updatePlan: async (id: string, data: UpdateWorkoutPlanRequest) => {
-    const response = await apiClient.patch<ApiResponse<ClientWorkoutPlan>>(`/workout/plans/${id}`, data)
+    const response = await apiClient.patch<ClientWorkoutPlan>(`/workout/plans/${id}`, data)
     return response.data
   },
 
   deletePlan: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/workout/plans/${id}`)
+    const response = await apiClient.delete<void>(`/workout/plans/${id}`)
     return response.data
   },
 }
@@ -105,17 +105,17 @@ export const workoutLogService = {
   },
 
   getLogById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<WorkoutLog>>(`/workout/logs/${id}`)
+    const response = await apiClient.get<WorkoutLog>(`/workout/logs/${id}`)
     return response.data
   },
 
   createLog: async (data: CreateWorkoutLogRequest) => {
-    const response = await apiClient.post<ApiResponse<WorkoutLog>>("/workout/logs", data)
+    const response = await apiClient.post<WorkoutLog>("/workout/logs", data)
     return response.data
   },
 
   deleteLog: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/workout/logs/${id}`)
+    const response = await apiClient.delete<void>(`/workout/logs/${id}`)
     return response.data
   },
 }
@@ -135,17 +135,17 @@ export const progressService = {
   },
 
   getProgressById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<ClientProgress>>(`/workout/progress/${id}`)
+    const response = await apiClient.get<ClientProgress>(`/workout/progress/${id}`)
     return response.data
   },
 
   createProgress: async (data: CreateProgressRequest) => {
-    const response = await apiClient.post<ApiResponse<ClientProgress>>("/workout/progress", data)
+    const response = await apiClient.post<ClientProgress>("/workout/progress", data)
     return response.data
   },
 
   deleteProgress: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse<void>>(`/workout/progress/${id}`)
+    const response = await apiClient.delete<void>(`/workout/progress/${id}`)
     return response.data
   },
 }

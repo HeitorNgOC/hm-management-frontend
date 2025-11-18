@@ -4,7 +4,11 @@ import type { Supplier, CreateSupplierRequest, UpdateSupplierRequest, SupplierFi
 const supplierService = {
   getAll: async (filters?: SupplierFilters) => {
     const response = await apiClient.get("/suppliers", { params: filters })
-    return response.data as Supplier[]
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as Supplier[]
+    if (Array.isArray(payload.data)) return payload.data as Supplier[]
+    if (Array.isArray(payload.items)) return payload.items as Supplier[]
+    return [] as Supplier[]
   },
 
   getById: async (id: string) => {

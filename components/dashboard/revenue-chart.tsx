@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { useRevenueData } from "@/hooks/use-dashboard"
+import { ensureArray } from "@/lib/utils"
+import { EmptyState } from "@/components/crud"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatCurrency } from "@/lib/utils"
 
@@ -28,7 +30,21 @@ export function RevenueChart({ period = "month" }: RevenueChartProps) {
     )
   }
 
-  const chartData = data || []
+  const chartData = ensureArray<any>(data)
+
+  if (!chartData.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Receita</CardTitle>
+          <CardDescription>Evolução da receita ao longo do tempo</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EmptyState title="Sem dados" description="Não há dados de receita para o período selecionado." />
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>

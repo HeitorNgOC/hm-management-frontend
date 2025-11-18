@@ -29,7 +29,7 @@ export const modalityService = {
   },
 
   getModalityById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<Modality>>(`/gym/modalities/${id}`)
+    const response = await apiClient.get<Modality>(`/gym/modalities/${id}`)
     return response.data
   },
 
@@ -65,7 +65,7 @@ export const gymClassService = {
   },
 
   getClassById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<GymClass>>(`/gym/classes/${id}`)
+    const response = await apiClient.get<GymClass>(`/gym/classes/${id}`)
     return response.data
   },
 
@@ -101,7 +101,7 @@ export const enrollmentService = {
   },
 
   getEnrollmentById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<ClassEnrollment>>(`/gym/enrollments/${id}`)
+    const response = await apiClient.get<ClassEnrollment>(`/gym/enrollments/${id}`)
     return response.data
   },
 

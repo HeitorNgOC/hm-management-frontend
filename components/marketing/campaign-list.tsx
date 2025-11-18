@@ -23,6 +23,9 @@ export function CampaignList() {
   const { data, isLoading } = useCampaigns(filters, page)
   const deleteCampaign = useDeleteCampaign()
 
+  const payload = data as any
+  const rows = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+
   const handleDelete = (id: string) => {
     setDeleteConfirm({ open: true, id })
   }
@@ -59,7 +62,7 @@ export function CampaignList() {
           <TableBody>
             {isLoading ? (
               <SkeletonTable rows={5} columns={6} />
-            ) : data?.data.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="p-0">
                   <EmptyState
@@ -74,7 +77,7 @@ export function CampaignList() {
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((campaign) => (
+              rows.map((campaign: any) => (
                 <TableRow key={campaign.id}>
                   <TableCell className="font-medium">{campaign.name}</TableCell>
                   <TableCell>

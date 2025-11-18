@@ -24,7 +24,7 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
   const form = useForm<CreateTransactionFormData>({
     resolver: zodResolver(createTransactionSchema),
     defaultValues: {
-      cashRegisterId: cashRegisterData?.data?.id,
+      cashRegisterId: cashRegisterData?.id,
       type: "income",
       category: "service",
       amount: 0,

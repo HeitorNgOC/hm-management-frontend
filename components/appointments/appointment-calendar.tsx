@@ -24,7 +24,9 @@ export function AppointmentCalendar() {
   })
 
   const getAppointmentsForSlot = (time: string) => {
-    return data?.data.filter((apt) => apt.startTime === time) || []
+    const payload = data as any
+    const rows = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+    return rows.filter((apt: any) => apt.startTime === time) || []
   }
 
   return (
@@ -75,7 +77,7 @@ export function AppointmentCalendar() {
                       {appointments.length === 0 ? (
                         <div className="text-sm text-muted-foreground italic">Disponível</div>
                       ) : (
-                        appointments.map((apt) => (
+                        appointments.map((apt: any) => (
                           <div key={apt.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                             <div className="flex-1">
                               <div className="font-medium">{apt.client.name}</div>

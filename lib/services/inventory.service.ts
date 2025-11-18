@@ -25,7 +25,7 @@ const inventoryService = {
   },
 
   getItemById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<InventoryItem>>(`/inventory/${id}`)
+    const response = await apiClient.get<InventoryItem>(`/inventory/${id}`)
     return response.data
   },
 
@@ -63,7 +63,7 @@ const inventoryService = {
   },
 
   getLowStockItems: async () => {
-    const response = await apiClient.get<ApiResponse<InventoryItem[]>>("/inventory/low-stock")
+    const response = await apiClient.get<InventoryItem[]>("/inventory/low-stock")
     return response.data
   },
 }

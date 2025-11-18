@@ -40,8 +40,8 @@ export function SubscriptionPlans() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {plans?.data.map((plan) => {
-          const isCurrentPlan = currentSubscription?.data?.planId === plan.id
+        {plans?.map((plan) => {
+          const isCurrentPlan = currentSubscription?.planId === plan.id
 
           return (
             <Card key={plan.id} className={`p-6 ${isCurrentPlan ? "border-primary" : ""}`}>

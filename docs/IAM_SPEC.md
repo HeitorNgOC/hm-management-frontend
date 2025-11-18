@@ -108,6 +108,42 @@ create index on users(company_id);
 create index on positions(company_id);
 create index on invitations(company_id);
 create index on invitations(status);
+
+-- Clients (end users / customers) --
+-- There are two common approaches: A) represent customers as `users` with role CUSTOMER
+--    B) keep a separate `clients` table linked to a user account or using independent credentials/tokens.
+-- Both are supported below; choose the one that best fits your business model.
+
+-- Option A: Use existing users table with a CUSTOMER role
+-- (simple, leverages existing auth/session and permissions)
+-- If chosen, ensure frontend/backend treat CUSTOMER as a limited role (no internal permissions by default).
+
+-- Option B: Dedicated clients table (recommended when clients have different profile shape or lifecycle)
+create table clients (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  email text,
+  phone text,
+  name text,
+  cpf text,
+  cnpj text,
+  profile jsonb default '{}'::jsonb, -- arbitrary client-visible data (preferences, training plan pointers, etc)
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (company_id, email)
+);
+
+-- Token table for scheduling / magic links (one-time or short-lived)
+create table client_tokens (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references clients(id) on delete cascade,
+  token text not null unique,
+  type text not null, -- e.g. 'magic_link' | 'scheduling_link'
+  metadata jsonb default '{}'::jsonb,
+  used boolean not null default false,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
 ```
 
 Key invariants:
@@ -129,6 +165,38 @@ Base: `/api`
 - POST `/auth/verify-email` → { token }
 - POST `/auth/accept-invite` → { inviteToken, name?, password } => AuthResponse
 - (Legacy/disabled) POST `/auth/register` → { email, password, name, companyName } => AuthResponse
+
+### Client Access (customers)
+
+Clients should be able to access the platform in two primary ways:
+
+- Normal login (email + password) if they have credentials (either because they were created as `users` with role CUSTOMER or they registered via an onboarding flow).
+- Magic/scheduling link: they receive a time-limited tokenized link (e.g. `/client/access?token=...`) which allows immediate access to the client-facing area without a password. These links should be single-use or short-lived and recorded in `client_tokens`.
+
+Recommended routes for client access (when using dedicated `clients` + `client_tokens`):
+
+- POST `/client/auth/login` → { email, password } => { token, client }
+- POST `/client/auth/token-exchange` → { token } => { token: bearerJwt, client }  // consumes `client_tokens` entry
+- GET `/client/me` → { data: Client } (authenticated by client JWT)
+- POST `/client/auth/refresh` → { refreshToken } => { token }
+
+Scheduling / magic link flow:
+
+1. The server generates a single-use token row in `client_tokens` with type `scheduling_link`, `expires_at` short (e.g. 1 hour), and metadata { appointmentId }.
+2. The user receives a link: `https://yourapp.com/client/access?token=<token>`.
+3. Client frontend sends token to `/client/auth/token-exchange` which validates token, marks it used (or immediately expires), and returns a client JWT session.
+4. Client is redirected to the booking view or client dashboard and can continue with an authenticated session. Tokens must be single-use and logged.
+
+Permissions and UX notes:
+- Clients generally should not receive the same permissions as staff. Define a minimal permission set (e.g., `client.view_bookings`, `client.manage_payments`, `client.view_workouts`) if you plan to gate features by permission.
+- Alternatively, treat clients as a role `CUSTOMER` within the `user_role` enum and map UI gates for customers to a small subset of the app. This simplifies session model at the cost of mixing employee and client concerns in one table.
+- Record consent and privacy choices on the `clients.profile` JSONB to support GDPR-like requirements.
+
+Security recommendations:
+- Magic/scheduling links must be single-use or set to `used = true` once exchanged. Keep `expires_at` short (minutes to hours) depending on sensitivity.
+- Do not include sensitive data in the token string; store metadata server-side and return only an opaque token.
+- For client JWTs consider a separate claim (e.g. `subType: 'client'`) so backend can enforce different rate-limits and session rules.
+
 
 ### IAM / Invitations
 - GET `/iam/invitations` → query: page, limit, search?, status? → PaginatedResponse<Invitation>
@@ -162,3 +230,26 @@ Base: `/api`
 - Official onboarding flow is via invitations. The first tenant admin is mocked outside public flows; `/auth/register` should remain disabled in multi-tenant mode.
 - Email uniqueness should be at least per company; global uniqueness is recommended if feasible.
 - Permissions are strings; the UI expects them on the user entity and on positions. A common pattern is to take permissions = position.permissions ∪ user.permissions.
+
+## Client implementation checklist (developer guidance)
+
+- Decide modeling approach: `users` with role `CUSTOMER` vs dedicated `clients` table.
+- If dedicated `clients` table: implement `client_tokens` for magic links and update backend auth to support `/client/auth/token-exchange`.
+- Add frontend routes/components:
+  - `/client/access?token=` — exchange token and redirect to client dashboard.
+  - client login page and client dashboard view (limited UI surface).
+- Define minimal client permission set or gate features by role. Keep server-side checks conservative.
+  - Define minimal client permission set or gate features by role. Keep server-side checks conservative.
+
+### Frontend contract (implemented in this frontend repo)
+
+The frontend in this repository expects the following client endpoints and behavior (used by `ClientAuthProvider` and `clientService`):
+
+- POST `/clients/generate-link` → { email } → 200 OK on success (server sends the magic link via email)
+- POST `/clients/exchange-token` → { token } → { token: bearerJwt, client }  // token is the opaque magic token; response returns client JWT and the client object
+- GET `/clients/me` → returns client profile object (this endpoint is protected by client JWT)
+
+Notes:
+- The frontend stores client session in `localStorage` keys `client_token` and `client_user` to avoid overwriting the admin session. If you adopt a single `users` model instead, adapt the frontend to reuse the main auth flow.
+- If you use the `client_tokens` approach, ensure `/clients/exchange-token` marks tokens used and enforces expiration.
+- Add migrations for `clients` and `client_tokens`, and update seed data/process to create sample client accounts for QA.

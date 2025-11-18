@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useToast } from "@/hooks/use-toast"
 import { useUsers, useDeleteUser } from "@/hooks/use-users"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,27 +27,77 @@ export function UserList() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id?: string }>({ open: false })
 
   const { data, isLoading, isError, refetch } = useUsers(filters, page)
-  const rows = Array.isArray(data?.data) ? (data!.data as any[]) : []
-  const invalidData = !!data && !Array.isArray(data?.data)
-  const totalPages = data?.pagination?.totalPages ?? 0
-  const currentPage = data?.pagination?.page ?? page
+  // Support both shapes: some hooks return PaginatedResponse (with .data) and
+  // others may return raw arrays. Be defensive to avoid runtime crashes.
+  const payload = data as any
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+    ? (payload.data as any[])
+    : Array.isArray(payload?.items)
+    ? (payload.items as any[])
+    : []
+  const invalidData = !!data && !Array.isArray(payload) && !Array.isArray(payload?.data) && !Array.isArray(payload?.items)
+  const totalPages = (payload?.pagination?.totalPages as number) ?? 0
+  const currentPage = (payload?.pagination?.page as number) ?? page
   const deleteUser = useDeleteUser()
 
   const allSelected = useMemo(() => (rows.length ? selectedIds.size === rows.length : false), [selectedIds, rows.length])
 
   const handleSearch = (search: string) => {
-    setFilters((prev) => ({ ...prev, search }))
+    const next = { ...(filters || {}), search }
+    if (!validateFilters(next)) return
+    setFilters(next)
     setPage(1)
   }
 
   const handleRoleFilter = (role: UserRole | "all") => {
-    setFilters((prev) => ({ ...prev, role: role === "all" ? undefined : role }))
+    const next = { ...(filters || {}), role: role === "all" ? undefined : role }
+    if (!validateFilters(next)) return
+    setFilters(next)
     setPage(1)
   }
 
   const handleStatusFilter = (status: UserStatus | "all") => {
-    setFilters((prev) => ({ ...prev, status: status === "all" ? undefined : status }))
+    const next = { ...(filters || {}), status: status === "all" ? undefined : status }
+    if (!validateFilters(next)) return
+    setFilters(next)
     setPage(1)
+  }
+
+  const { toast } = useToast()
+
+  // Validate filters before applying them to avoid sending invalid payloads to the service
+  function validateFilters(candidate: UserFilters) {
+    // search: optional string, max length 200
+    if (candidate.search && typeof candidate.search !== "string") {
+      toast({ title: "Filtro inválido", description: "O termo de busca deve ser um texto." })
+      return false
+    }
+    if (candidate.search && candidate.search.length > 200) {
+      toast({ title: "Filtro inválido", description: "O termo de busca é muito longo (máx 200 caracteres)." })
+      return false
+    }
+
+    // role: if present, must be one of the allowed values
+    if (candidate.role) {
+      const allowed = ["admin", "manager", "employee"]
+      if (!allowed.includes(candidate.role as string)) {
+        toast({ title: "Filtro inválido", description: "Papel inválido selecionado." })
+        return false
+      }
+    }
+
+    // status: if present, must be one of the allowed statuses
+    if (candidate.status) {
+      const allowedStatus = ["active", "inactive", "on_leave"]
+      if (!allowedStatus.includes(candidate.status as string)) {
+        toast({ title: "Filtro inválido", description: "Status inválido selecionado." })
+        return false
+      }
+    }
+
+    return true
   }
 
   const handleDelete = async (id: string) => {
@@ -71,7 +122,7 @@ export function UserList() {
     if (allSelected) {
       setSelectedIds(new Set())
     } else {
-  setSelectedIds(new Set(rows.map((u) => u.id)))
+      setSelectedIds(new Set(rows.map((u: any) => u.id)))
     }
   }
 
@@ -209,7 +260,7 @@ export function UserList() {
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((user) => (
+              rows.map((user: any) => (
                 <TableRow key={user.id} className={selectedIds.has(user.id) ? "bg-muted" : ""}>
                   <TableCell>
                     <input

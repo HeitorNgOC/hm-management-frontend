@@ -19,6 +19,9 @@ export function TemplateList() {
   const { data, isLoading } = useTemplates(page)
   const deleteTemplate = useDeleteCampaign()
 
+  const payload = data as any
+  const rows = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+
   const handleDelete = (id: string) => {
     setDeleteConfirm({ open: true, id })
   }
@@ -46,7 +49,7 @@ export function TemplateList() {
           <TableBody>
             {isLoading ? (
               <SkeletonTable rows={5} columns={4} />
-            ) : data?.data.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="p-0">
                   <EmptyState
@@ -61,7 +64,7 @@ export function TemplateList() {
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((template) => (
+              rows.map((template: any) => (
                 <TableRow key={template.id}>
                   <TableCell className="font-medium">{template.name}</TableCell>
                   <TableCell>{template.subject}</TableCell>

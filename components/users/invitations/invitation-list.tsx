@@ -20,9 +20,11 @@ export function InvitationList() {
   const deleteInvitation = useDeleteInvitation()
   const resendInvitation = useResendInvitation()
 
-  const rows = Array.isArray(data?.data) ? (data!.data as any[]) : []
-  const invalidData = !!data && !Array.isArray(data?.data)
-  const totalPages = data?.pagination?.totalPages || 1
+  // Support both PaginatedResponse and plain-array shapes
+  const payload = data as any
+  const rows = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.items) ? payload.items : []
+  const invalidData = !!data && !Array.isArray(payload) && !Array.isArray(payload?.data) && !Array.isArray(payload?.items)
+  const totalPages = payload?.pagination?.totalPages ?? 1
 
   const handleSearch = (search: string) => {
     setFilters((prev) => ({ ...prev, search }))
@@ -126,7 +128,7 @@ export function InvitationList() {
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((inv) => (
+              rows.map((inv: any) => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">{inv.email}</TableCell>
                   <TableCell>{inv.name || "-"}</TableCell>
@@ -163,7 +165,7 @@ export function InvitationList() {
       {data && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Página {data.pagination.page} de {totalPages}
+            Página {payload?.pagination?.page ?? page} de {totalPages}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>

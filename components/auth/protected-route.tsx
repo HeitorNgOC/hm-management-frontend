@@ -9,7 +9,9 @@ import type { Permission, UserRole } from "@/lib/types/user"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
+  // Backwards-compatible: older code used `permissions` prop. Prefer `requiredPermissions`.
   requiredPermissions?: Permission[]
+  permissions?: Permission[]
   requiredRoles?: UserRole[]
   requireAll?: boolean // If true, user must have ALL permissions/roles. If false, ANY permission/role is enough
   fallbackUrl?: string
@@ -18,10 +20,13 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({
   children,
   requiredPermissions = [],
+  permissions = [],
   requiredRoles = [],
   requireAll = false,
   fallbackUrl = "/login",
 }: ProtectedRouteProps) {
+  // honor backwards-compatible `permissions` prop if provided
+  const effectivePermissions = (requiredPermissions && requiredPermissions.length ? requiredPermissions : permissions) || []
   const { isAuthenticated, isLoading, user, hasPermission, hasRole } = useAuth()
   const router = useRouter()
 
@@ -47,10 +52,10 @@ export function ProtectedRoute({
     }
 
     // Check permission requirements
-    if (requiredPermissions.length > 0) {
+    if (effectivePermissions.length > 0) {
       const hasRequiredPermission = requireAll
-        ? requiredPermissions.every((permission) => hasPermission(permission))
-        : requiredPermissions.some((permission) => hasPermission(permission))
+        ? effectivePermissions.every((permission) => hasPermission(permission))
+        : effectivePermissions.some((permission) => hasPermission(permission))
 
       if (!hasRequiredPermission) {
         router.push("/unauthorized")
@@ -95,10 +100,10 @@ export function ProtectedRoute({
     }
   }
 
-  if (requiredPermissions.length > 0) {
+  if (effectivePermissions.length > 0) {
     const hasRequiredPermission = requireAll
-      ? requiredPermissions.every((permission) => hasPermission(permission))
-      : requiredPermissions.some((permission) => hasPermission(permission))
+      ? effectivePermissions.every((permission) => hasPermission(permission))
+      : effectivePermissions.some((permission) => hasPermission(permission))
 
     if (!hasRequiredPermission) {
       return null

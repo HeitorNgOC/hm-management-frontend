@@ -23,8 +23,11 @@ interface ExchangeFormDialogProps {
 
 export function ExchangeFormDialog({ open, onOpenChange }: ExchangeFormDialogProps) {
   const { mutate: createExchange, isPending } = useCreateExchange()
-  const { data: inventoryData } = useInventoryItems(1, 1000)
+  const { data: inventoryData } = useInventoryItems(undefined, 1, 1000)
   const [priceDifference, setPriceDifference] = useState(0)
+
+  const inventoryPayload = inventoryData as any
+  const inventoryList = Array.isArray(inventoryPayload) ? inventoryPayload : inventoryPayload?.data ?? inventoryPayload?.items ?? []
 
   const form = useForm<CreateExchangeInput>({
     resolver: zodResolver(createExchangeSchema),
@@ -46,9 +49,9 @@ export function ExchangeFormDialog({ open, onOpenChange }: ExchangeFormDialogPro
   const newQuantity = form.watch("newQuantity")
 
   useEffect(() => {
-    if (originalItemId && newItemId && inventoryData?.data) {
-      const originalItem = inventoryData.data.find((item) => item.id === originalItemId)
-      const newItem = inventoryData.data.find((item) => item.id === newItemId)
+    if (originalItemId && newItemId && inventoryList) {
+      const originalItem = inventoryList.find((item: any) => item.id === originalItemId)
+      const newItem = inventoryList.find((item: any) => item.id === newItemId)
 
       if (originalItem?.sellPrice && newItem?.sellPrice) {
         const originalTotal = originalItem.sellPrice * originalQuantity
@@ -67,7 +70,7 @@ export function ExchangeFormDialog({ open, onOpenChange }: ExchangeFormDialogPro
     })
   }
 
-  const availableItems = inventoryData?.data.filter((item) => item.status === "in_stock" && item.sellPrice)
+  const availableItems = inventoryList?.filter((item: any) => item.status === "in_stock" && item.sellPrice)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,7 +127,7 @@ export function ExchangeFormDialog({ open, onOpenChange }: ExchangeFormDialogPro
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {availableItems?.map((item) => (
+                          {availableItems?.map((item: any) => (
                             <SelectItem key={item.id} value={item.id}>
                               {item.name} - {formatCurrency(item.sellPrice || 0)}
                             </SelectItem>
@@ -173,7 +176,7 @@ export function ExchangeFormDialog({ open, onOpenChange }: ExchangeFormDialogPro
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {availableItems?.map((item) => (
+                          {availableItems?.map((item: any) => (
                             <SelectItem key={item.id} value={item.id}>
                               {item.name} - {formatCurrency(item.sellPrice || 0)}
                             </SelectItem>

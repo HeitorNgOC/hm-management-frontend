@@ -134,16 +134,16 @@ export default function TransactionsPage() {
                     <div className="flex items-center gap-4">
                       <div
                         className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                          transaction.type === "income" ? "bg-green-100" : "bg-red-100"
+                          (transaction.type as string) === "income" ? "bg-green-100" : "bg-red-100"
                         }`}
                       >
                         {transaction.type === "income" ? (
                           <ArrowUpRight
-                            className={`h-5 w-5 ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}
+                            className={`h-5 w-5 ${(transaction.type as string) === "income" ? "text-green-600" : "text-red-600"}`}
                           />
-                        ) : (
+                          ) : (
                           <ArrowDownLeft
-                            className={`h-5 w-5 ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}
+                            className={`h-5 w-5 ${(transaction.type as string) === "income" ? "text-green-600" : "text-red-600"}`}
                           />
                         )}
                       </div>
@@ -155,9 +155,9 @@ export default function TransactionsPage() {
                       </div>
                     </div>
                     <p
-                      className={`text-lg font-bold ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}
+                      className={`text-lg font-bold ${(transaction.type as string) === "income" ? "text-green-600" : "text-red-600"}`}
                     >
-                      {transaction.type === "income" ? "+" : "-"}R$ {transaction.amount.toFixed(2)}
+                      {(transaction.type as string) === "income" ? "+" : "-"}R$ {transaction.amount.toFixed(2)}
                     </p>
                   </div>
                 ))}

@@ -30,7 +30,7 @@ export const medicalRecordService = {
   },
 
   getRecordById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<MedicalRecord>>(`/medical-records/${id}`)
+    const response = await apiClient.get<MedicalRecord>(`/medical-records/${id}`)
     return response.data
   },
 
@@ -66,12 +66,12 @@ export const patientService = {
   },
 
   getPatientById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<Patient>>(`/patients/${id}`)
+    const response = await apiClient.get<Patient>(`/patients/${id}`)
     return response.data
   },
 
   getPatientHistory: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<PatientHistory>>(`/patients/${id}/history`)
+    const response = await apiClient.get<PatientHistory>(`/patients/${id}/history`)
     return response.data
   },
 

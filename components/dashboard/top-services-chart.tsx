@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { useTopServices } from "@/hooks/use-dashboard"
+import { ensureArray } from "@/lib/utils"
+import { EmptyState } from "@/components/crud"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatCurrency } from "@/lib/utils"
 
@@ -24,7 +26,21 @@ export function TopServicesChart() {
     )
   }
 
-  const chartData = data || []
+  const chartData = ensureArray(data)
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Serviços Mais Vendidos</CardTitle>
+          <CardDescription>Top 5 serviços por receita</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EmptyState title="Sem dados" description="Não há serviços suficientes para exibir o gráfico." />
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>

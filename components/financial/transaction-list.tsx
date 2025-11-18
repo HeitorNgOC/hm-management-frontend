@@ -20,6 +20,9 @@ export function TransactionList() {
   const { data, isLoading } = useTransactions(filters, page)
   const deleteTransaction = useDeleteTransaction()
 
+  const payload = data as any
+  const rows = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+
   const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja remover esta transação?")) {
       await deleteTransaction.mutateAsync(id)
@@ -56,14 +59,14 @@ export function TransactionList() {
                   Carregando...
                 </TableCell>
               </TableRow>
-            ) : data?.data.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center">
                   Nenhuma transação encontrada
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((transaction) => (
+              rows.map((transaction: any) => (
                 <TableRow key={transaction.id}>
                   <TableCell>{format(new Date(transaction.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</TableCell>
                   <TableCell>
@@ -108,10 +111,10 @@ export function TransactionList() {
         </Table>
       </div>
 
-      {data && data.pagination.totalPages > 1 && (
+      {data && (payload?.pagination?.totalPages ?? 0) > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Página {data.pagination.currentPage} de {data.pagination.totalPages}
+            Página {payload?.pagination?.page ?? page} de {payload?.pagination?.totalPages}
           </p>
           <div className="flex gap-2">
             <Button
@@ -126,7 +129,7 @@ export function TransactionList() {
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => p + 1)}
-              disabled={page === data.pagination.totalPages}
+              disabled={page === (payload?.pagination?.totalPages ?? 1)}
             >
               Próxima
             </Button>

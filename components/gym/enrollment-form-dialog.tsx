@@ -23,6 +23,8 @@ export function EnrollmentFormDialog({ open, onOpenChange, enrollmentId, onSucce
   const isEditing = !!enrollmentId
   const { data: enrollmentData } = useEnrollment(enrollmentId || "")
   const { data: classesData } = useGymClasses({ status: "active" }, 1, 100)
+  const classesPayload = classesData as any
+  const classesList = Array.isArray(classesPayload) ? classesPayload : classesPayload?.data ?? classesPayload?.items ?? []
   const createEnrollment = useCreateEnrollment()
   const updateEnrollment = useUpdateEnrollment()
 
@@ -36,11 +38,12 @@ export function EnrollmentFormDialog({ open, onOpenChange, enrollmentId, onSucce
   })
 
   useEffect(() => {
-    if (enrollmentData?.data) {
+    const src = (enrollmentData as any)?.data ?? (enrollmentData as any)
+    if (src) {
       form.reset({
-        classId: enrollmentData.data.classId,
-        clientId: enrollmentData.data.clientId,
-        notes: enrollmentData.data.notes || "",
+        classId: src.classId,
+        clientId: src.clientId,
+        notes: src.notes || "",
       })
     }
   }, [enrollmentData, form])
@@ -81,7 +84,7 @@ export function EnrollmentFormDialog({ open, onOpenChange, enrollmentId, onSucce
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {classesData?.data.map((gymClass) => (
+                      {classesList.map((gymClass: any) => (
                         <SelectItem key={gymClass.id} value={gymClass.id} disabled={gymClass.status === "full"}>
                           <div className="flex items-center justify-between w-full">
                             <span>{gymClass.name}</span>

@@ -4,13 +4,14 @@ import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useCreateUser, useUpdateUser, useUser } from "@/hooks/use-users"
+import { usePositions } from "@/hooks/use-positions"
 import { createUserSchema, type CreateUserFormData } from "@/lib/validations/user"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { formatPhoneBR, normalizeEmail } from "@/lib/utils/mask"
+import { formatPhoneBR, normalizeEmail, formatCpf } from "@/lib/utils/mask"
 
 interface UserFormDialogProps {
   open: boolean
@@ -24,6 +25,15 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
   const { data: userData } = useUser(userId || "")
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
+  const positionsQuery = usePositions(1, 200)
+  const positionsPayload = positionsQuery.data as any
+  const positions = Array.isArray(positionsPayload)
+    ? positionsPayload
+    : Array.isArray(positionsPayload?.data)
+    ? positionsPayload.data
+    : Array.isArray(positionsPayload?.items)
+    ? positionsPayload.items
+    : []
 
   const form = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
@@ -40,17 +50,24 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
   })
 
   useEffect(() => {
-    if (userData?.data) {
+    // Support double-wrapped envelopes (some endpoints occasionally return { data: { data: ... } })
+    const maybe = (userData as any)?.data ?? (userData as any)
+    const src = (maybe as any)?.data ?? maybe
+    if (src) {
+      // Normalize values coming from the service to the shape expected by the form
+      const normalizedRole = typeof src.role === "string" ? (src.role.toLowerCase() as "admin" | "manager" | "employee") : ("employee" as const)
+      const normalizedHireDate = src.hireDate ? src.hireDate.split("T")[0] : new Date().toISOString().split("T")[0]
+
       form.reset({
-        name: userData.data.name,
-        email: userData.data.email,
-        phone: userData.data.phone,
-        cpf: userData.data.cpf,
-        positionId: userData.data.positionId,
-        role: userData.data.role,
-        hireDate: userData.data.hireDate.split("T")[0],
-        salary: userData.data.salary,
-        commission: userData.data.commission,
+        name: src.name,
+        email: src.email,
+        phone: src.phone,
+        cpf: src.cpf,
+        positionId: src.positionId,
+        role: normalizedRole,
+        hireDate: normalizedHireDate,
+        salary: src.salary ?? undefined,
+        commission: src.commission ?? undefined,
         password: "",
       })
     }
@@ -60,9 +77,18 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
     try {
       if (isEditing) {
         const { password, ...updateData } = data
-        await updateUser.mutateAsync({ id: userId, data: updateData })
+        // Normalize role to API expected enum (uppercase) before sending to service
+        const apiUpdate = {
+          ...updateData,
+          role: typeof updateData.role === "string" ? (updateData.role.toUpperCase() as any) : updateData.role,
+        }
+        await updateUser.mutateAsync({ id: userId!, data: apiUpdate })
       } else {
-        await createUser.mutateAsync(data)
+        const apiCreate = {
+          ...data,
+          role: typeof data.role === "string" ? (data.role.toUpperCase() as any) : data.role,
+        }
+        await createUser.mutateAsync(apiCreate)
       }
       form.reset()
       onSuccess?.()
@@ -141,7 +167,7 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
                   <FormItem>
                     <FormLabel>CPF</FormLabel>
                     <FormControl>
-                      <Input placeholder="000.000.000-00" {...field} />
+                      <Input placeholder="000.000.000-00" {...field} value={field.value || ""} onChange={(e) => field.onChange(formatCpf(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -154,16 +180,32 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cargo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={(v) => {
+                        // Ignore sentinel placeholder values (they are disabled but guard anyway)
+                        if (v === '__loading' || v === '__no-positions') {
+                          field.onChange("")
+                        } else {
+                          field.onChange(v)
+                        }
+                      }}
+                      value={field.value || ""}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um cargo" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="1">Barbeiro</SelectItem>
-                        <SelectItem value="2">Recepcionista</SelectItem>
-                        <SelectItem value="3">Gerente</SelectItem>
+                        {positionsQuery.isLoading && <SelectItem value="__loading" disabled>Carregando...</SelectItem>}
+                        {positions.map((pos: any) => (
+                          <SelectItem key={pos.id} value={pos.id}>
+                            {pos.name}
+                          </SelectItem>
+                        ))}
+                        {!positionsQuery.isLoading && !positions.length && (
+                          <SelectItem value="__no-positions" disabled>Nenhum cargo encontrado</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -219,7 +261,11 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
                         type="number"
                         step="0.01"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          field.onChange(val === "" ? undefined : Number(val))
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -238,7 +284,11 @@ export function UserFormDialog({ open, onOpenChange, userId, onSuccess }: UserFo
                         type="number"
                         step="0.01"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          field.onChange(val === "" ? undefined : Number(val))
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

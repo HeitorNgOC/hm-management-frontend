@@ -4,7 +4,11 @@ import type { Goal, CreateGoalRequest, UpdateGoalRequest, GoalFilters } from "@/
 const goalService = {
   getAll: async (filters?: GoalFilters) => {
     const response = await apiClient.get("/goals", { params: filters })
-    return response.data as Goal[]
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as Goal[]
+    if (Array.isArray(payload.data)) return payload.data as Goal[]
+    if (Array.isArray(payload.items)) return payload.items as Goal[]
+    return [] as Goal[]
   },
 
   getById: async (id: string) => {

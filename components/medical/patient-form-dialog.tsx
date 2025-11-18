@@ -44,20 +44,20 @@ export function PatientFormDialog({ open, onOpenChange, patientId, onSuccess }: 
   })
 
   useEffect(() => {
-    if (patientData?.data) {
+    if (patientData) {
       form.reset({
-        name: patientData.data.name,
-        species: patientData.data.species || "",
-        breed: patientData.data.breed || "",
-        gender: patientData.data.gender,
-        birthDate: patientData.data.birthDate ? patientData.data.birthDate.split("T")[0] : "",
-        weight: patientData.data.weight,
-        color: patientData.data.color || "",
-        microchip: patientData.data.microchip || "",
-        ownerId: patientData.data.ownerId,
-        allergies: patientData.data.allergies || [],
-        chronicConditions: patientData.data.chronicConditions || [],
-        bloodType: patientData.data.bloodType || "",
+        name: patientData.name,
+        species: patientData.species || "",
+        breed: patientData.breed || "",
+        gender: patientData.gender,
+        birthDate: patientData.birthDate ? patientData.birthDate.split("T")[0] : "",
+        weight: patientData.weight,
+        color: patientData.color || "",
+        microchip: patientData.microchip || "",
+        ownerId: patientData.ownerId,
+        allergies: patientData.allergies || [],
+        chronicConditions: patientData.chronicConditions || [],
+        bloodType: patientData.bloodType || "",
       })
     }
   }, [patientData, form])

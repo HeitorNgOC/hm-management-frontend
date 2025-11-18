@@ -20,7 +20,11 @@ const settingsService = {
 
   getCommissionSettings: async (filters?: CommissionSettingFilters) => {
     const response = await apiClient.get("/settings/commissions", { params: filters })
-    return response.data as CommissionSetting[]
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as CommissionSetting[]
+    if (Array.isArray(payload.data)) return payload.data as CommissionSetting[]
+    if (Array.isArray(payload.items)) return payload.items as CommissionSetting[]
+    return [] as CommissionSetting[]
   },
 
   createCommissionSetting: async (data: CreateCommissionSettingRequest) => {

@@ -140,7 +140,7 @@ export default function InvoicesPage() {
                       <Badge className={statusColors[invoice.status]}>
                         {invoice.status === "pending" && "Pendente"}
                         {invoice.status === "paid" && "Paga"}
-                        {invoice.status === "overdue" && "Vencida"}
+                        {(invoice.status as string) === "overdue" && "Vencida"}
                       </Badge>
                       <p className="font-bold">R$ {invoice.amount.toFixed(2)}</p>
                       <Button size="sm" variant="ghost">

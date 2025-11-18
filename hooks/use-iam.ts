@@ -99,11 +99,13 @@ export function useResendInvitation() {
 export function useAcceptInvite() {
   const { toast } = useToast()
   return useMutation({
-    mutationFn: (data: AcceptInviteRequest) => authService.acceptInvite(data),
-    onError: (error: any) => {
+    mutationFn: (data: AcceptInviteRequest) => {
+      return authService.acceptInvite(data)
+    },
+    onError: (error: Error) => {
       toast({
         title: "Erro ao aceitar convite",
-        description: error.response?.data?.message || "Não foi possível aceitar o convite",
+        description: error.message,
         variant: "destructive",
       })
     },

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ScrollArea } from "@/components/ui/scroll-area"
+// Use native overflow for permissions area to avoid Radix ScrollArea click/overlay issues
 
 interface PositionFormDialogProps {
   open: boolean
@@ -37,21 +37,29 @@ export function PositionFormDialog({ open, onOpenChange, positionId, onSuccess }
   })
 
   useEffect(() => {
-    if (positionData?.data) {
+    // `positionData` comes from the service and is the Position object (api-client unwraps envelopes).
+    // Normalize to support both shapes: either the position itself or an envelope with `.data`.
+    const payload = (positionData as any)?.data ?? (positionData as any)
+    if (payload) {
       form.reset({
-        name: positionData.data.name,
-        description: positionData.data.description || "",
-        permissions: positionData.data.permissions,
+        name: payload.name,
+        description: payload.description || "",
+        permissions: payload.permissions || [],
       })
     }
   }, [positionData, form])
 
   const onSubmit = async (data: CreatePositionFormData) => {
     try {
+      // Normalize permissions to ensure they are valid Permission values.
+      const normalizedPermissions = (data.permissions || []).filter((p): p is any =>
+        allPermissionKeys.includes(p as any),
+      )
+
       if (isEditing) {
-        await updatePosition.mutateAsync({ id: positionId, data })
+        await updatePosition.mutateAsync({ id: positionId!, data: { ...data, permissions: normalizedPermissions } })
       } else {
-        await createPosition.mutateAsync(data)
+        await createPosition.mutateAsync({ ...data, permissions: normalizedPermissions })
       }
       form.reset()
       onSuccess?.()
@@ -71,9 +79,11 @@ export function PositionFormDialog({ open, onOpenChange, positionId, onSuccess }
     {} as Record<string, typeof AVAILABLE_PERMISSIONS>,
   )
 
+  const allPermissionKeys = AVAILABLE_PERMISSIONS.map((p) => p.key)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+    <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar Cargo" : "Novo Cargo"}</DialogTitle>
         </DialogHeader>
@@ -118,8 +128,39 @@ export function PositionFormDialog({ open, onOpenChange, positionId, onSuccess }
                   <div>
                     <FormLabel>Permissões</FormLabel>
                     <FormDescription>Selecione as permissões que este cargo terá no sistema</FormDescription>
+                    {/* Select-all checkbox is shown inside the permissions box above */}
                   </div>
-                  <ScrollArea className="flex-1 border rounded-md p-4">
+                  <div className="flex-1 border rounded-md p-4 overflow-auto">
+                    {/* Select all checkbox inside the permissions box */}
+                    <div className="mb-3 flex items-center gap-3">
+                      {/**
+                       * Use form.watch so the checkbox reflects current selection.
+                       * checked accepts boolean or 'indeterminate' (Radix).
+                       */}
+                      {
+                        (() => {
+                          const selected: string[] = form.watch("permissions") || []
+                          const allSelected = allPermissionKeys.length > 0 && selected.length === allPermissionKeys.length
+                          const someSelected = selected.length > 0 && selected.length < allPermissionKeys.length
+
+                          return (
+                            <>
+                              <Checkbox
+                                checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                                onCheckedChange={(val) => {
+                                  if (val) {
+                                    form.setValue("permissions", allPermissionKeys)
+                                  } else {
+                                    form.setValue("permissions", [])
+                                  }
+                                }}
+                              />
+                              <span className="text-sm font-medium">Selecionar todos</span>
+                            </>
+                          )
+                        })()
+                      }
+                    </div>
                     <div className="space-y-6">
                       {Object.entries(permissionsByCategory).map(([category, permissions]) => (
                         <div key={category} className="space-y-3">
@@ -156,7 +197,7 @@ export function PositionFormDialog({ open, onOpenChange, positionId, onSuccess }
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

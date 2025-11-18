@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/chart"
 import { Pie, PieChart, Cell } from "recharts"
 import { useAppointmentsByStatus } from "@/hooks/use-dashboard"
+import { ensureArray } from "@/lib/utils"
+import { EmptyState } from "@/components/crud"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const STATUS_COLORS = {
@@ -47,7 +49,8 @@ export function AppointmentsStatusChart() {
     )
   }
 
-  const chartData = (data || []).map((item) => ({
+  const raw = ensureArray<any>(data)
+  const chartData = raw.map((item) => ({
     name: STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] || item.status,
     value: item.count,
     fill: STATUS_COLORS[item.status as keyof typeof STATUS_COLORS] || "hsl(var(--muted))",
@@ -71,7 +74,10 @@ export function AppointmentsStatusChart() {
         <CardDescription>Distribuição dos agendamentos por status</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[300px]">
+        {chartData.length === 0 ? (
+          <EmptyState title="Sem dados" description="Não há agendamentos para exibir." />
+        ) : (
+          <ChartContainer config={chartConfig} className="h-[300px]">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent />} />
             <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
@@ -81,7 +87,8 @@ export function AppointmentsStatusChart() {
             </Pie>
             <ChartLegend content={<ChartLegendContent />} />
           </PieChart>
-        </ChartContainer>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   )

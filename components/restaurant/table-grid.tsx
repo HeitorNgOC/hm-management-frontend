@@ -43,6 +43,9 @@ export function TableGrid() {
     }
   }
 
+  const payload = data as any
+  const tables = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.items) ? payload.items : []
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -57,7 +60,7 @@ export function TableGrid() {
         <div className="text-center py-8">Carregando...</div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {data?.data.map((table) => (
+          {tables.map((table: any) => (
             <Card
               key={table.id}
               className={`p-6 cursor-pointer transition-all hover:shadow-lg ${

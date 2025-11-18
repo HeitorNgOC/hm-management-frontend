@@ -19,6 +19,9 @@ export function CouponList() {
   const { data, isLoading } = useCoupons({}, page)
   const deleteCoupon = useDeleteCampaign()
 
+  const payload = data as any
+  const rows = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+
   const handleDelete = (id: string) => {
     setDeleteConfirm({ open: true, id })
   }
@@ -47,7 +50,7 @@ export function CouponList() {
           <TableBody>
             {isLoading ? (
               <SkeletonTable rows={5} columns={5} />
-            ) : data?.data.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="p-0">
                   <EmptyState
@@ -62,7 +65,7 @@ export function CouponList() {
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((coupon) => (
+              rows.map((coupon: any) => (
                 <TableRow key={coupon.id}>
                   <TableCell className="font-medium">{coupon.code}</TableCell>
                   <TableCell>

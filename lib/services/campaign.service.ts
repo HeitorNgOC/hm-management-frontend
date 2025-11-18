@@ -10,7 +10,11 @@ import type {
 const campaignService = {
   getAll: async (filters?: CampaignFilters) => {
     const response = await apiClient.get("/campaigns", { params: filters })
-    return response.data as Campaign[]
+    const payload: any = response.data ?? {}
+    if (Array.isArray(payload)) return payload as Campaign[]
+    if (Array.isArray(payload.data)) return payload.data as Campaign[]
+    if (Array.isArray(payload.items)) return payload.items as Campaign[]
+    return [] as Campaign[]
   },
 
   getById: async (id: string) => {

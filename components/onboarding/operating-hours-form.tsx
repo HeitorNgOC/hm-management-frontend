@@ -62,7 +62,8 @@ export function OperatingHoursForm({ onSubmit, onBack, defaultValues, isLoading 
   })
 
   const handleFormSubmit = (data: OperatingHoursFormData) => {
-    onSubmit(data.hours)
+    // cast to the expected OperatingHours[] shape (zod inference can be slightly different from TS union literal types)
+    onSubmit(data.hours as unknown as OperatingHours[])
   }
 
   return (

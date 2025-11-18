@@ -32,6 +32,8 @@ export function CampaignFormDialog({ open, onOpenChange, campaignId }: CampaignF
   const createCampaign = useCreateCampaign()
   const updateCampaign = useUpdateCampaign()
   const { data: templates } = useTemplates()
+  const templatesPayload = templates as any
+  const templatesList = Array.isArray(templatesPayload) ? templatesPayload : templatesPayload?.data ?? templatesPayload?.items ?? []
 
   const onSubmit = async (data: any) => {
     if (campaignId) {
@@ -116,7 +118,7 @@ export function CampaignFormDialog({ open, onOpenChange, campaignId }: CampaignF
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {templates?.data?.map((template) => (
+                      {templatesList.map((template: any) => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}
                         </SelectItem>

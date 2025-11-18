@@ -25,7 +25,7 @@ export interface Position {
   permissions: Permission[]
 }
 
-export type UserRole = "admin" | "manager" | "employee"
+export type UserRole = "ADMIN" | "MANAGER" | "EMPLOYEE"
 
 export type UserStatus = "active" | "inactive" | "on_leave"
 
@@ -44,6 +44,11 @@ export type Permission =
   | "inventory.delete"
   | "financial.view"
   | "financial.manage"
+  | "financial.create"
+  | "financial.edit"
+  | "financial.delete"
+  | "reports.export"
+  | "marketing.view"
   | "reports.view"
   | "settings.view"
   | "settings.edit"
